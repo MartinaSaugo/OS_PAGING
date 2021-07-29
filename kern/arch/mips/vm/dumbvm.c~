@@ -151,7 +151,7 @@ getfreeppages(unsigned long npages) {
 	
   if (found>=0) {
     for (i=found; i<found+np; i++) {
-      freeRamFrames[i] = (unsigned char)1;
+      freeRamFrames[i] = (unsigned char)0;
     }
     allocSize[found] = np;
     addr = (paddr_t) found*PAGE_SIZE;

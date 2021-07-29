@@ -75,6 +75,7 @@ void pid_table_init (struct proc *p)
 	if(p->p_pid == 0)
 	panic("table full\n");
 }
+
 void pid_table_del (struct proc *p)
 {
 	int i;
@@ -117,7 +118,7 @@ proc_create(const char *name)
 
 	/* VFS fields */
 	proc->p_cwd = NULL;
-//////////////////////////////////////////////////////wmd
+////////////////////////////////////////////////////wmd
 	proc->s_exit=sem_create("synchexit", 0);
 	if(proc->s_exit == NULL)
 	{
