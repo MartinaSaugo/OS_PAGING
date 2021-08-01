@@ -139,8 +139,10 @@ getfreeppages(unsigned long npages) {
   if (!isTableActive()) return 0; 
   spinlock_acquire(&freemem_lock);
   for (i=0,first=found=-1; i<nRamFrames; i++) {
-    if (freeRamFrames[i]==((unsigned char)0)) {
-      if (i==0 || freeRamFrames[i-1]!=((unsigned char) 0) ) 
+    /*if (freeRamFrames[i]==((unsigned char)0)) {
+      if (i==0 || freeRamFrames[i-1]!=((unsigned char) 0) ) */
+	if (freeRamFrames[i]){
+	if (i==0 || !freeRamFrames[i-1] )
         first = i; /* set first free in an interval */   
       if (i-first+1 >= np) {
         found = first;
@@ -151,7 +153,8 @@ getfreeppages(unsigned long npages) {
 	
   if (found>=0) {
     for (i=found; i<found+np; i++) {
-      freeRamFrames[i] = (unsigned char)1;
+      //freeRamFrames[i] = (unsigned char)1;
+	freeRamFrames[i]=(unsigned char)0;    
     }
     allocSize[found] = np;
     addr = (paddr_t) found*PAGE_SIZE;
