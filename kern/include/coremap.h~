@@ -8,6 +8,6 @@ typedef struct coremap_entry {
 	status_t status; 
 	paddr_t paddr; //where?
 	//potential other info for paging
-};
+}coremap_entry_t;
 
 #endif

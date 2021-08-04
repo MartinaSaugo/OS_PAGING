@@ -76,8 +76,9 @@ static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 
 static struct spinlock freemem_lock = SPINLOCK_INITIALIZER;
 
-static unsigned char *freeRamFrames = NULL;
-static unsigned long *allocSize = NULL;
+//static unsigned char *freeRamFrames = NULL;
+//static unsigned long *allocSize = NULL;
+static coremap_entry_t *freeRamFrames =NULL;
 static int nRamFrames = 0;
 
 static int allocTableActive = 0;
@@ -96,17 +97,25 @@ vm_bootstrap(void)
   int i;
   nRamFrames = ((int)ram_getsize())/PAGE_SIZE;  
   /* alloc freeRamFrame and allocSize */  
-  freeRamFrames = kmalloc(sizeof(unsigned char)*nRamFrames);
+  /*freeRamFrames = kmalloc(sizeof(unsigned char)*nRamFrames);
   if (freeRamFrames==NULL) return;  
   allocSize     = kmalloc(sizeof(unsigned long)*nRamFrames);
   if (allocSize==NULL) {    
-    /* reset to disable this vm management */
+    // reset to disable this vm management 
     freeRamFrames = NULL; return;
-  }
+  }*/
+
+  freeRamFrames=(coremap_entry_t*)kmalloc(sizeof(coremap_entry_t)*nRamFrames);
+  if(freeRamFrames==NULL) return;
+
   for (i=0; i<nRamFrames; i++) {    
-    freeRamFrames[i] = (unsigned char)0;
-    allocSize[i]     = 0;  
+    //freeRamFrames[i] = (unsigned char)0;
+    //allocSize[i]     = 0; 
+	freeRamFrames[i].status=FREE;
+	freeRamFrames[i].paddr=-1;
+	freeRamFrames[i].size=-1; 
   }
+
   spinlock_acquire(&freemem_lock);
   allocTableActive = 1;
   spinlock_release(&freemem_lock);
@@ -139,10 +148,8 @@ getfreeppages(unsigned long npages) {
   if (!isTableActive()) return 0; 
   spinlock_acquire(&freemem_lock);
   for (i=0,first=found=-1; i<nRamFrames; i++) {
-    /*if (freeRamFrames[i]==((unsigned char)0)) {
-      if (i==0 || freeRamFrames[i-1]!=((unsigned char) 0) ) */
-	if (freeRamFrames[i]){
-	if (i==0 || !freeRamFrames[i-1] )
+	if (freeRamFrames[i].status==FREE){
+	if (i==0 || freeRamFrames[i-1].status!=FREE )
         first = i; /* set first free in an interval */   
       if (i-first+1 >= np) {
         found = first;
@@ -153,18 +160,16 @@ getfreeppages(unsigned long npages) {
 	
   if (found>=0) {
     for (i=found; i<found+np; i++) {
-      //freeRamFrames[i] = (unsigned char)1;
-	freeRamFrames[i]=(unsigned char)0;    
+	freeRamFrames[i].status=DIRTY; //starts as dirty, becomes clean after flush   
     }
-    allocSize[found] = np;
+    freeRamFrames[found].size = np;
     addr = (paddr_t) found*PAGE_SIZE;
+    freeRamFrames[found].paddr=(paddr_t) found*PAGE_SIZE;
   }
   else {
     addr = 0;
   }
-
   spinlock_release(&freemem_lock);
-
   return addr;
 }
 
@@ -172,7 +177,6 @@ static paddr_t
 getppages(unsigned long npages)
 {
   paddr_t addr;
-
   /* try freed pages first */
   addr = getfreeppages(npages);
   if (addr == 0) {
@@ -183,7 +187,8 @@ getppages(unsigned long npages)
   }
   if (addr!=0 && isTableActive()) {
     spinlock_acquire(&freemem_lock);
-    allocSize[addr/PAGE_SIZE] = npages;
+    //allocSize[addr/PAGE_SIZE] = npages;
+    freeRamFrames[addr/PAGE_SIZE].size=npages;
     spinlock_release(&freemem_lock);
   } 
   return addr;
@@ -194,12 +199,13 @@ freeppages(paddr_t addr, unsigned long npages){
   long i, first, np=(long)npages;	
   if (!isTableActive()) return 0; 
   first = addr/PAGE_SIZE;
-  KASSERT(allocSize!=NULL);
+  //KASSERT(allocSize!=NULL);
+  KASSERT(freeRamFrames!=NULL);
   KASSERT(nRamFrames>first);
 
   spinlock_acquire(&freemem_lock);
   for (i=first; i<first+np; i++) {
-    freeRamFrames[i] = (unsigned char)1;
+    freeRamFrames[i].status = FREE;
   }
   spinlock_release(&freemem_lock);
 
@@ -211,7 +217,6 @@ vaddr_t
 alloc_kpages(unsigned npages)
 {
 	paddr_t pa;
-
 	dumbvm_can_sleep();
 	pa = getppages(npages);
 	if (pa==0) {
@@ -225,9 +230,10 @@ free_kpages(vaddr_t addr){
   if (isTableActive()) {
     paddr_t paddr = addr - MIPS_KSEG0;
     long first = paddr/PAGE_SIZE;	
-    KASSERT(allocSize!=NULL);
+    //KASSERT(allocSize!=NULL);
+    KASSERT(freeRamFrames!=NULL);
     KASSERT(nRamFrames>first);
-    freeppages(paddr, allocSize[first]);	
+    freeppages(paddr, freeRamFrames[first].size);	
   }
 }
 
