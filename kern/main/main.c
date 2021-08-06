@@ -102,7 +102,7 @@ boot(void)
 	kprintf("%s", harvard_copyright);
 	kprintf("\n");
 
-	kprintf("Put-your-group-name-here's system version %s (%s #%d)\n",
+	kprintf("Laudadio-Sara-Saugo's system version %s (%s #%d)\n",
 		GROUP_VERSION, buildconfig, buildversion);
 	kprintf("\n");
 
@@ -115,7 +115,7 @@ boot(void)
 	kheap_nextgeneration();
 
 	/* Probe and initialize devices. Interrupts should come on. */
-	kprintf("Device probe...\n");
+	kprintf("Device sprobe...\n");
 	KASSERT(curthread->t_curspl > 0);
 	mainbus_bootstrap();
 	KASSERT(curthread->t_curspl == 0);

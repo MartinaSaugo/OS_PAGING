@@ -112,8 +112,8 @@ vm_bootstrap(void)
     //freeRamFrames[i] = (unsigned char)0;
     //allocSize[i]     = 0; 
 	freeRamFrames[i].status=FREE;
-	freeRamFrames[i].paddr=NULL;
-	freeRamFrames[i].size=0; 
+	freeRamFrames[i].paddr=-1;
+	freeRamFrames[i].size=-1; 
   }
 
   spinlock_acquire(&freemem_lock);
@@ -177,6 +177,7 @@ static paddr_t
 getppages(unsigned long npages)
 {
   paddr_t addr;
+  int i;
   /* try freed pages first */
   addr = getfreeppages(npages);
   if (addr == 0) {
@@ -189,6 +190,9 @@ getppages(unsigned long npages)
     spinlock_acquire(&freemem_lock);
     //allocSize[addr/PAGE_SIZE] = npages;
     freeRamFrames[addr/PAGE_SIZE].size=npages;
+    freeRamFrames[addr/PAGE_SIZE].paddr=addr;
+    for (i=0; i<npages; i++)
+	freeRamFrames[(addr/PAGE_SIZE)+i].status=DIRTY;
     spinlock_release(&freemem_lock);
   } 
   return addr;
