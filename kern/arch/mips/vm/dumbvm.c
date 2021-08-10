@@ -96,24 +96,14 @@ vm_bootstrap(void)
 {
   int i;
   nRamFrames = ((int)ram_getsize())/PAGE_SIZE;  
-  /* alloc freeRamFrame and allocSize */  
-  /*freeRamFrames = kmalloc(sizeof(unsigned char)*nRamFrames);
-  if (freeRamFrames==NULL) return;  
-  allocSize     = kmalloc(sizeof(unsigned long)*nRamFrames);
-  if (allocSize==NULL) {    
-    // reset to disable this vm management 
-    freeRamFrames = NULL; return;
-  }*/
 
   freeRamFrames=(coremap_entry_t*)kmalloc(sizeof(coremap_entry_t)*nRamFrames);
   if(freeRamFrames==NULL) return;
 
   for (i=0; i<nRamFrames; i++) {    
-    //freeRamFrames[i] = (unsigned char)0;
-    //allocSize[i]     = 0; 
-	freeRamFrames[i].status=FREE;
-	freeRamFrames[i].paddr=-1;
-	freeRamFrames[i].size=-1; 
+    freeRamFrames[i].status = CLEAN;
+    freeRamFrames[i].paddr = -1;
+    freeRamFrames[i].size = -1; 
   }
 
   spinlock_acquire(&freemem_lock);
