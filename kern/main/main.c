@@ -51,6 +51,7 @@
 #include <version.h>
 #include "hello.h"
 #include "autoconf.h"  // for pseudoconfig
+#include <coremap.h>
 
 
 /*
@@ -108,6 +109,8 @@ boot(void)
 
 	/* Early initialization. */
 	ram_bootstrap();
+  coremap_entry_t *coremap = coremap_init();
+  (void) coremap;
 	proc_bootstrap();
 	thread_bootstrap();
 	hardclock_bootstrap();
