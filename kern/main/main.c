@@ -74,7 +74,7 @@ static const char harvard_copyright[] =
     "   President and Fellows of Harvard College.  All rights reserved.\n";
 
 
-coremap_entry_t *coremap = NULL;
+extern coremap_entry_t *coremap;  // defined in vm.c
 
 /*
  * Initial boot sequence.

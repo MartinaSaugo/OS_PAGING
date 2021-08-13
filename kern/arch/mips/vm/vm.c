@@ -64,8 +64,8 @@
  */
 static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 static struct spinlock freemem_lock = SPINLOCK_INITIALIZER;
-static coremap_entry_t *freeRamFrames = NULL;
-static int nRamFrames = 0;
+coremap_entry_t *coremap = NULL;
+long nRamFrames = 0;
 
 static int allocTableActive = 0;
 
@@ -80,18 +80,6 @@ static int isTableActive () {
 void
 vm_bootstrap(void)
 {
-  int i;
-  nRamFrames = ((int)ram_getsize())/PAGE_SIZE;  
-
-  freeRamFrames = (coremap_entry_t*) kmalloc (sizeof(coremap_entry_t)*nRamFrames);
-  if(freeRamFrames==NULL) return;
-
-  for (i=0; i<nRamFrames; i++) {    
-    freeRamFrames[i].status = CLEAN;
-    freeRamFrames[i].paddr = -1;
-    freeRamFrames[i].size = -1; 
-  }
-
   spinlock_acquire(&freemem_lock);
   allocTableActive = 1;
   spinlock_release(&freemem_lock);
@@ -121,11 +109,12 @@ getfreeppages(unsigned long npages) {
   paddr_t addr;	
   long i, first, found, np = (long)npages;
 
-  if (!isTableActive()) return 0; 
+  if (!isTableActive()) 
+    return 0; 
   spinlock_acquire(&freemem_lock);
-  for (i=0,first=found=-1; i<nRamFrames; i++) {
-	if (freeRamFrames[i].status==FREE){
-	if (i==0 || freeRamFrames[i-1].status!=FREE )
+  for (i=0, first=found=-1; i < nRamFrames; i++) {
+    if (coremap[i].status == FREE || coremap[i].status == CLEAN){
+      if (i==0 || freeRamFrames[i-1].status != FREE || freeRamFrames[i-1].status != CLEAN)
         first = i; /* set first free in an interval */   
       if (i-first+1 >= np) {
         found = first;
@@ -133,14 +122,14 @@ getfreeppages(unsigned long npages) {
       }
     }
   }
-	
-  if (found>=0) {
+
+  if (found >= 0) {
     for (i=found; i<found+np; i++) {
-	freeRamFrames[i].status=DIRTY; //starts as dirty, becomes clean after flush   
+      coremap[i].status=DIRTY; //starts as dirty, becomes clean after flush   
     }
-    freeRamFrames[found].size = np;
-    addr = (paddr_t) found*PAGE_SIZE;
-    freeRamFrames[found].paddr=(paddr_t) found*PAGE_SIZE;
+    coremap[found].size = np;
+    addr = (paddr_t) found * PAGE_SIZE;
+    coremap[found].paddr = addr;
   }
   else {
     addr = 0;
@@ -159,14 +148,14 @@ getppages(unsigned long npages)
   if (addr == 0) {
     /* call stealmem */
     spinlock_acquire(&stealmem_lock);
+    // TODO: do not use ram_stealmem, and also implement concat list (not contiguous allocation)
     addr = ram_stealmem(npages);
     spinlock_release(&stealmem_lock);
   }
   if (addr!=0 && isTableActive()) {
     spinlock_acquire(&freemem_lock);
-    //allocSize[addr/PAGE_SIZE] = npages;
-    freeRamFrames[addr/PAGE_SIZE].size=npages;
-    freeRamFrames[addr/PAGE_SIZE].paddr=addr;
+    coremap[addr/PAGE_SIZE].size = npages;
+    coremap[addr/PAGE_SIZE].paddr = addr;
     for (i=0; i<npages; i++)
 	freeRamFrames[(addr/PAGE_SIZE)+i].status=DIRTY;
     spinlock_release(&freemem_lock);
@@ -174,18 +163,19 @@ getppages(unsigned long npages)
   return addr;
 }
 
+/* frees npages starting from addr */
 static int 
 freeppages(paddr_t addr, unsigned long npages){
   long i, first, np=(long)npages;	
-  if (!isTableActive()) return 0; 
+  if (!isTableActive()) 
+    return 0; 
   first = addr/PAGE_SIZE;
-  //KASSERT(allocSize!=NULL);
-  KASSERT(freeRamFrames!=NULL);
-  KASSERT(nRamFrames>first);
+  KASSERT(coremap != NULL);
+  KASSERT(nRamFrames > first);
 
   spinlock_acquire(&freemem_lock);
-  for (i=first; i<first+np; i++) {
-    freeRamFrames[i].status = FREE;
+  for (i=first; i < first + np; i++) {
+    coremap[i].status = FREE;
   }
   spinlock_release(&freemem_lock);
 
@@ -205,15 +195,15 @@ alloc_kpages(unsigned npages)
 	return PADDR_TO_KVADDR(pa);
 }
 
+/* frees a previously allocated sequence of pages */
 void 
 free_kpages(vaddr_t addr){
   if (isTableActive()) {
     paddr_t paddr = addr - MIPS_KSEG0;
     long first = paddr/PAGE_SIZE;	
-    //KASSERT(allocSize!=NULL);
-    KASSERT(freeRamFrames!=NULL);
-    KASSERT(nRamFrames>first);
-    freeppages(paddr, freeRamFrames[first].size);	
+    KASSERT(coremap != NULL);
+    KASSERT(nRamFrames > first);
+    freeppages(paddr, coremap[first].size);	
   }
 }
 
