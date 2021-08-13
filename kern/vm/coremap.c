@@ -8,6 +8,8 @@
 
 coremap_entry_t *
 coremap_init(void){
+  int i;
+  coremap_entry_t *coremap;
   paddr_t paddr;
   vaddr_t vaddr;
   paddr_t ramsize = ram_getsize(); // returns lastpaddr
@@ -29,6 +31,12 @@ coremap_init(void){
     return NULL;
   vaddr = PADDR_TO_KVADDR(paddr);
   KASSERT(vaddr % PAGE_SIZE == 0);
+  coremap = (coremap_entry_t *) vaddr;
+  for(i = 0; i < kernelpages + pages; i++) {
+    /* set FIXED status for pages which are allocated for kernel and for 
+     * the coremap itself */
+    coremap[i].status = FIXED;
+  }
   return (coremap_entry_t *) vaddr;
 }
 
