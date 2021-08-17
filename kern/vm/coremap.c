@@ -6,7 +6,7 @@
 #include <coremap.h>
 #include <current.h>
 
-extern long nRamFrames; // defined in vm.c
+long nRamFrames = 0; // defined here
 
 coremap_entry_t *
 coremap_init(void){

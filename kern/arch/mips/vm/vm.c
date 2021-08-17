@@ -64,8 +64,8 @@
  */
 static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 static struct spinlock freemem_lock = SPINLOCK_INITIALIZER;
-coremap_entry_t *coremap = NULL;
-long nRamFrames = 0;
+extern coremap_entry_t *coremap; // defined in kern/main/main.c
+extern long nRamFrames; // defined in kern/vm/coremap.c
 
 static int allocTableActive = 0;
 
@@ -114,7 +114,7 @@ getfreeppages(unsigned long npages) {
   spinlock_acquire(&freemem_lock);
   for (i=0, first=found=-1; i < nRamFrames; i++) {
     if (coremap[i].status == FREE || coremap[i].status == CLEAN){
-      if (i==0 || freeRamFrames[i-1].status != FREE || freeRamFrames[i-1].status != CLEAN)
+      if (i==0 || coremap[i-1].status != FREE || coremap[i-1].status != CLEAN)
         first = i; /* set first free in an interval */   
       if (i-first+1 >= np) {
         found = first;
@@ -157,7 +157,7 @@ getppages(unsigned long npages)
     coremap[addr/PAGE_SIZE].size = npages;
     coremap[addr/PAGE_SIZE].paddr = addr;
     for (i=0; i<npages; i++)
-	freeRamFrames[(addr/PAGE_SIZE)+i].status=DIRTY;
+      coremap[(addr/PAGE_SIZE)+i].status=DIRTY;
     spinlock_release(&freemem_lock);
   } 
   return addr;
