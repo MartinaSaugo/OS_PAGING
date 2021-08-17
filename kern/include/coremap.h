@@ -7,9 +7,11 @@ typedef enum {FREE, CLEAN, DIRTY, FIXED} status_t;
 typedef struct coremap_entry {
 	status_t status; 
 	paddr_t paddr; //where?
-	long size;  //= previous allocsize, now all in one
-  	int next;   // where is the next frame allocated?
+	long size; //= previous allocsize, now all in one
 	//potential other info for paging
-} coremap_entry_t;
+}coremap_entry_t;
+
+//declare
+extern coremap_entry_t *freeRamFrames;
 
 #endif

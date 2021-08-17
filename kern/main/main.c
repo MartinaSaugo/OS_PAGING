@@ -74,8 +74,6 @@ static const char harvard_copyright[] =
     "   President and Fellows of Harvard College.  All rights reserved.\n";
 
 
-coremap_entry_t *coremap;  // defined here
-
 /*
  * Initial boot sequence.
  */
@@ -111,7 +109,12 @@ boot(void)
 
 	/* Early initialization. */
 	ram_bootstrap();
-  coremap = coremap_init();
+  /*coremap_entry_t *coremap = coremap_init();
+  (void) coremap;*/
+
+	//freeRamFrames declared in coremap.h
+	freeRamFrames=coremap_init();
+
 	proc_bootstrap();
 	thread_bootstrap();
 	hardclock_bootstrap();

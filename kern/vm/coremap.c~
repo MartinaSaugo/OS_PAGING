@@ -6,8 +6,6 @@
 #include <coremap.h>
 #include <current.h>
 
-coremap_entry_t *freeRamFrames;
-
 coremap_entry_t *
 coremap_init(void){
   paddr_t paddr;

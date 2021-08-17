@@ -39,8 +39,6 @@
 #include <addrspace.h>
 #include <vm.h>
 
-#include <coremap.h>
-
 /*
  * Dumb MIPS-only "VM system" that is intended to only be just barely
  * enough to struggle off the ground. You should replace all of this
@@ -80,8 +78,7 @@ static struct spinlock freemem_lock = SPINLOCK_INITIALIZER;
 
 //static unsigned char *freeRamFrames = NULL;
 //static unsigned long *allocSize = NULL;
-
-//static coremap_entry_t *freeRamFrames = NULL;
+static coremap_entry_t *freeRamFrames = NULL;
 static int nRamFrames = 0;
 
 static int allocTableActive = 0;
