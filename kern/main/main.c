@@ -51,6 +51,7 @@
 #include <version.h>
 #include "hello.h"
 #include "autoconf.h"  // for pseudoconfig
+
 #include <coremap.h>
 
 
@@ -77,6 +78,9 @@ static const char harvard_copyright[] =
 /*
  * Initial boot sequence.
  */
+
+extern coremap_entry_t *freeRamFrames;
+
 static
 void
 boot(void)
