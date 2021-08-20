@@ -124,6 +124,8 @@ dumbvm_can_sleep(void)
 	}
 }
 
+extern int kernelAlloc;
+
 static paddr_t 
 getfreeppages(unsigned long npages) {
   paddr_t addr;	
@@ -143,12 +145,12 @@ getfreeppages(unsigned long npages) {
   }
 	
   if (found>=0) {
-    for (i=found; i<found+np; i++) {
-	freeRamFrames[i].status=DIRTY; //starts as dirty, becomes clean after flush   
-    }
-    freeRamFrames[found].size = np;
-    addr = (paddr_t) found*PAGE_SIZE;
-    freeRamFrames[found].paddr=(paddr_t) found*PAGE_SIZE;
+    	for (i=found; i<found+np; i++) {
+		freeRamFrames[i].status=DIRTY; //starts as dirty, becomes clean after flush   
+    	}
+    	freeRamFrames[found].size = np;
+    	addr = (paddr_t) found*PAGE_SIZE;
+    	freeRamFrames[found].paddr=(paddr_t) found*PAGE_SIZE;
   }
   else {
     addr = 0;
@@ -172,7 +174,6 @@ getppages(unsigned long npages)
   }
   if (addr!=0 && isTableActive()) {
     spinlock_acquire(&freemem_lock);
-    //allocSize[addr/PAGE_SIZE] = npages;
     freeRamFrames[addr/PAGE_SIZE].size=npages;
     freeRamFrames[addr/PAGE_SIZE].paddr=addr;
     for (i=0; i<npages; i++)

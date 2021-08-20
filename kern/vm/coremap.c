@@ -18,13 +18,14 @@ coremap_init(void){
   paddr_t paddr;
   vaddr_t vaddr;
   paddr_t ramsize = ram_getsize(); // returns lastpaddr
+  paddr_t kernelsize=ram_getfirstfree(); //returns first available address after initializing kernel+exceptHandler... 
   long ramsizepages = ramsize / PAGE_SIZE;  // size of ram in pages
   nRamFrames=ramsizepages;
   long kernelpages;  // kernel size in pages
-  if(sizeof(struct proc) % PAGE_SIZE == 0)
-    kernelpages = sizeof(struct proc) / PAGE_SIZE;
+  if(kernelsize % PAGE_SIZE == 0)
+    kernelpages = kernelsize / PAGE_SIZE;
   else 
-    kernelpages = sizeof(struct proc) / PAGE_SIZE + 1;
+    kernelpages = kernelsize / PAGE_SIZE + 1;
   long size = ramsizepages * sizeof(coremap_entry_t);   // size to alloc for coremap
   long pages;
   if(size % PAGE_SIZE == 0) 
@@ -32,12 +33,17 @@ coremap_init(void){
   else 
     pages = (size / PAGE_SIZE) + 1; // if not a multiple of PAGE_SIZE...
 
-  paddr = ram_getmem(kernelpages, pages);
+  //paddr = ram_getmem(kernelpages, pages);
+  if(kernelpages+pages>ramsizepages)
+     panic("Too little memory for the bare minumin\n");
+  paddr=PAGE_SIZE*(kernelpages);
+
   if(paddr == 0) 
     return NULL;
   vaddr = PADDR_TO_KVADDR(paddr);
   KASSERT(vaddr % PAGE_SIZE == 0);
   coremap=(coremap_entry_t*)vaddr;
+	
   for (i=0; i<kernelpages; i++) { //alloc kernel   
     coremap[i].status = FIXED;
     coremap[i].paddr = 0;
@@ -48,7 +54,8 @@ coremap_init(void){
     coremap[i].paddr = paddr;
     coremap[i].size = pages; 
   }
-  for (; i<ramsizepages; i++) { //alloc everything else   
+
+  for (; i<ramsizepages; i++) { //alloc make everything empty   
     coremap[i].status = CLEAN;
     coremap[i].paddr = -1;
     coremap[i].size = 0; 

@@ -113,12 +113,6 @@ boot(void)
 
 	/* Early initialization. */
 	ram_bootstrap();
-  /*coremap_entry_t *coremap = coremap_init();
-  (void) coremap;*/
-
-	//freeRamFrames declared in coremap.h
-	freeRamFrames=coremap_init();
-
 	proc_bootstrap();
 	thread_bootstrap();
 	hardclock_bootstrap();
@@ -222,6 +216,9 @@ void
 kmain(char *arguments)
 {
 	boot();
+        
+	freeRamFrames=coremap_init();
+
 	#if OPT_HELLO
 	hello();
 	#endif
