@@ -1,5 +1,13 @@
 #ifndef _PAGETABLE_H_
 #define _PAGETABLE_H_
+#include <types.h>
+#include <lib.h>
+#include <cpu.h>
+#include <proc.h>
+#include <vm.h>
+#include <coremap.h>
+#include <current.h>
+#include <spinlock.h>
 #include <machine/vm.h> // TODO: check if needed
 
 typedef struct pagetable_entry {
@@ -13,5 +21,8 @@ typedef struct pagetable {
   struct pagetable_entry *tail;
   int npages;
 } pagetable_t;
+
+int pagetable_search(struct pagetable *, vaddr_t);
+int pagetable_add(struct pagetable *, vaddr_t);
 
 #endif
