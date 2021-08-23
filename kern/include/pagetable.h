@@ -1,5 +1,6 @@
 #ifndef _PAGETABLE_H_
 #define _PAGETABLE_H_
+#include <machine/vm.h> // TODO: check if needed
 
 typedef struct pagetable_entry {
   vaddr_t vaddr;                  // starting virtual address of the page 

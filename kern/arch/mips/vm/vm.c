@@ -353,6 +353,13 @@ as_create(void)
 	if (as==NULL) {
 		return NULL;
 	}
+  as -> pagetable = kmalloc(sizeof(struct pagetable));
+  if(as -> pagetable == NULL)
+    return NULL;
+  // TODO check
+  as -> pagetable -> head = NULL;
+  as -> pagetable -> tail = NULL;
+  as -> pagetable -> npages = 0;
 
 	as->as_vbase1 = 0;
 	as->as_pbase1 = 0;
