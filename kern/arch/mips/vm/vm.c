@@ -304,12 +304,12 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 
   // physical page index
-  index = pagetable_search(as -> pagetable, faultaddress);
-  if(index == -1){
-    pagetable_add(as -> pagetable, faultaddress); 
+  /* index = pagetable_search(as -> pagetable, faultaddress); */
+  /* if(index == -1){ */
+    /* pagetable_add(as -> pagetable, faultaddress);  */
     // TODO ASS3.3 swap in from disk 
     // update TLB
-  }
+  /* } */
 
   // search for a pagetable entry
     // if pagetable entry found in memory, update TLB and return 0 (restart)
@@ -322,7 +322,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
     index = pagetable_search(as -> pagetable, faultaddress);
     if(index == -1) // not present as pagetable entry
       index = pagetable_add(as -> pagetable, faultaddress);
-    paddr = freeRamFrames[index].paddr;
+	  paddr = freeRamFrames[index].paddr;
 	}
 	else {
     // segmentation fault 
