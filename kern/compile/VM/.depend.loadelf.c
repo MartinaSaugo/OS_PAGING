@@ -10,5 +10,5 @@ loadelf.o: ../../syscall/loadelf.c ../../include/types.h \
  includelinks/machine/thread.h ../../include/setjmp.h \
  includelinks/kern/machine/setjmp.h ../../include/addrspace.h \
  ../../include/vm.h includelinks/machine/vm.h ../../include/coremap.h \
- opt-dumbvm.h ../../include/vnode.h ../../include/elf.h \
- includelinks/machine/elf.h
+ ../../include/pagetable.h ../../include/cpu.h ../../include/vnode.h \
+ ../../include/elf.h includelinks/machine/elf.h

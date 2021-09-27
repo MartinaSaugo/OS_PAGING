@@ -302,6 +302,15 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
 	stacktop = USERSTACK;
 
+//////////////////////////////////////////check inside tlb//////////////////////
+	for (i=0; i<NUM_TLB; i++) {
+		tlb_read(&ehi, &elo, i);
+		if (elo & TLBLO_VALID && ehi == faultaddress) {
+			kprintf("CHECKPOINT_ PAGE IS HERE! %d", i); 
+		}
+	}
+///////////////////////////////////////////////////////////////////////////////////
+
 
   // physical page index
   /* index = pagetable_search(as -> pagetable, faultaddress); */
@@ -521,8 +530,8 @@ as_complete_load(struct addrspace *as)
 int
 as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 {
-	KASSERT(as->as_stackpbase != 0);
-
+	(void)as;
+//KASSERT(as->as_stackpbase != 0);
 	*stackptr = USERSTACK;
 	return 0;
 }

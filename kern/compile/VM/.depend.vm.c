@@ -10,4 +10,4 @@ vm.o: ../../arch/mips/vm/vm.c ../../include/types.h \
  ../../include/thread.h ../../include/array.h \
  includelinks/machine/thread.h ../../include/setjmp.h \
  includelinks/kern/machine/setjmp.h includelinks/mips/tlb.h \
- ../../include/addrspace.h ../../include/vm.h opt-dumbvm.h
+ ../../include/addrspace.h ../../include/vm.h ../../include/pagetable.h

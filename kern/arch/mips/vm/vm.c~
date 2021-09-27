@@ -39,6 +39,7 @@
 #include <addrspace.h>
 #include <vm.h>
 
+#include <pagetable.h>
 #include <coremap.h>
 
 /*
@@ -145,27 +146,12 @@ getfreeppages(unsigned long npages) {
   }
 	
   if (found>=0) {
-
-    if(kernelAlloc==0)
-    {
-	for (i=found; i<found+np; i++) {
-		freeRamFrames[i].status=FIXED; //we're allocating kernel here 
-    	}
-    	freeRamFrames[found].size = np;
-    	addr = (paddr_t) found*PAGE_SIZE;
-    	freeRamFrames[found].paddr=(paddr_t) found*PAGE_SIZE;
-	//IMPORTANT!
-	kernelAlloc=1;
-    }
-    else
-    {
     	for (i=found; i<found+np; i++) {
 		freeRamFrames[i].status=DIRTY; //starts as dirty, becomes clean after flush   
     	}
     	freeRamFrames[found].size = np;
     	addr = (paddr_t) found*PAGE_SIZE;
     	freeRamFrames[found].paddr=(paddr_t) found*PAGE_SIZE;
-    }
   }
   else {
     addr = 0;
@@ -182,14 +168,13 @@ getppages(unsigned long npages)
   /* try freed pages first */
   addr = getfreeppages(npages);
   if (addr == 0) {
-    /* call stealmem */
+    /* call stealmem (kernel only) */
     spinlock_acquire(&stealmem_lock);
     addr = ram_stealmem(npages);
     spinlock_release(&stealmem_lock);
   }
   if (addr!=0 && isTableActive()) {
     spinlock_acquire(&freemem_lock);
-    //allocSize[addr/PAGE_SIZE] = npages;
     freeRamFrames[addr/PAGE_SIZE].size=npages;
     freeRamFrames[addr/PAGE_SIZE].paddr=addr;
     for (i=0; i<npages; i++)
@@ -254,7 +239,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 {
 	vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop;
 	paddr_t paddr;
-	int i;
+	int i, index;
 	uint32_t ehi, elo;
 	struct addrspace *as;
 	int spl;
@@ -269,8 +254,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		  panic("dumbvm: got VM_FAULT_READONLY\n");
 		  //kprintf("dumbvm: got VM_FAULT_READONLY\n");
 	    case VM_FAULT_READ:
+		    break;
 	    case VM_FAULT_WRITE:
-		break;
+		    break;
 	    default:
 		return EINVAL;
 	}
@@ -295,17 +281,19 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	/* Assert that the address space has been set up properly. */
 	KASSERT(as->as_vbase1 != 0);
-	KASSERT(as->as_pbase1 != 0);
+	// KASSERT(as->as_pbase1 != 0);
 	KASSERT(as->as_npages1 != 0);
 	KASSERT(as->as_vbase2 != 0);
-	KASSERT(as->as_pbase2 != 0);
+	// KASSERT(as->as_pbase2 != 0);
 	KASSERT(as->as_npages2 != 0);
-	KASSERT(as->as_stackpbase != 0);
+	// KASSERT(as->as_stackpbase != 0);
 	KASSERT((as->as_vbase1 & PAGE_FRAME) == as->as_vbase1);
-	KASSERT((as->as_pbase1 & PAGE_FRAME) == as->as_pbase1);
+	// KASSERT((as->as_pbase1 & PAGE_FRAME) == as->as_pbase1);
 	KASSERT((as->as_vbase2 & PAGE_FRAME) == as->as_vbase2);
-	KASSERT((as->as_pbase2 & PAGE_FRAME) == as->as_pbase2);
-	KASSERT((as->as_stackpbase & PAGE_FRAME) == as->as_stackpbase);
+	// KASSERT((as->as_pbase2 & PAGE_FRAME) == as->as_pbase2);
+	// KASSERT((as->as_stackpbase & PAGE_FRAME) == as->as_stackpbase);
+
+  KASSERT(as -> pagetable != NULL);
 
 	vbase1 = as->as_vbase1;
 	vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
@@ -314,16 +302,39 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
 	stacktop = USERSTACK;
 
-	if (faultaddress >= vbase1 && faultaddress < vtop1) {
-		paddr = (faultaddress - vbase1) + as->as_pbase1;
+//////////////////////////////////////////check inside tlb//////////////////////
+	for (i=0; i<NUM_TLB; i++) {
+		tlb_read(&ehi, &elo, i);
+		if (elo & TLBLO_VALID && ehi == faultaddress) {
+			kprintf("CHECKPOINT_ PAGE IS HERE! %d", i); 
+		}
 	}
-	else if (faultaddress >= vbase2 && faultaddress < vtop2) {
-		paddr = (faultaddress - vbase2) + as->as_pbase2;
-	}
-	else if (faultaddress >= stackbase && faultaddress < stacktop) {
-		paddr = (faultaddress - stackbase) + as->as_stackpbase;
+///////////////////////////////////////////////////////////////////////////////////
+
+
+  // physical page index
+  /* index = pagetable_search(as -> pagetable, faultaddress); */
+  /* if(index == -1){ */
+    /* pagetable_add(as -> pagetable, faultaddress);  */
+    // TODO ASS3.3 swap in from disk 
+    // update TLB
+  /* } */
+
+  // search for a pagetable entry
+    // if pagetable entry found in memory, update TLB and return 0 (restart)
+    // if not found, swap in from disk (ASS3.3)
+  // if pagetable entry not found for faultaddress,
+  // create a new pagetable entry in pagetable, and allocate a new physical page
+
+	if ((faultaddress >= vbase1 && faultaddress < vtop1) || (faultaddress >= vbase2 && faultaddress < vtop2) || (faultaddress >= stackbase && faultaddress < stacktop)) {
+    // valid address, let's see if it's present in pagetable
+    index = pagetable_search(as -> pagetable, faultaddress);
+    if(index == -1) // not present as pagetable entry
+      index = pagetable_add(as -> pagetable, faultaddress);
+	  paddr = freeRamFrames[index].paddr;
 	}
 	else {
+    // segmentation fault 
 		return EFAULT;
 	}
 
@@ -369,6 +380,13 @@ as_create(void)
 	if (as==NULL) {
 		return NULL;
 	}
+  as -> pagetable = kmalloc(sizeof(struct pagetable));
+  if(as -> pagetable == NULL)
+    return NULL;
+  // TODO check
+  as -> pagetable -> head = NULL;
+  as -> pagetable -> tail = NULL;
+  as -> pagetable -> npages = 0;
 
 	as->as_vbase1 = 0;
 	as->as_pbase1 = 0;
@@ -457,33 +475,38 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	return ENOSYS;
 }
 
+/* 
 static
 void
 as_zero_region(paddr_t paddr, unsigned npages)
 {
 	bzero((void *)PADDR_TO_KVADDR(paddr), npages * PAGE_SIZE);
 }
+*/
 
 int
 as_prepare_load(struct addrspace *as)
 {
+  /* 
 	KASSERT(as->as_pbase1 == 0);
 	KASSERT(as->as_pbase2 == 0);
 	KASSERT(as->as_stackpbase == 0);
 
 	dumbvm_can_sleep();
+  // take only one page per segment, let's see if it works... TODO
 
-	as->as_pbase1 = getppages(as->as_npages1);
+	as->as_pbase1 = getppages(1);
+  // pagetable_write(as -> pagetable, as -> as_pbase1);
 	if (as->as_pbase1 == 0) {
 		return ENOMEM;
 	}
 
-	as->as_pbase2 = getppages(as->as_npages2);
+	as->as_pbase2 = getppages(1);
 	if (as->as_pbase2 == 0) {
 		return ENOMEM;
 	}
 
-	as->as_stackpbase = getppages(DUMBVM_STACKPAGES);
+	as->as_stackpbase = getppages(1);
 	if (as->as_stackpbase == 0) {
 		return ENOMEM;
 	}
@@ -491,7 +514,8 @@ as_prepare_load(struct addrspace *as)
 	as_zero_region(as->as_pbase1, as->as_npages1);
 	as_zero_region(as->as_pbase2, as->as_npages2);
 	as_zero_region(as->as_stackpbase, DUMBVM_STACKPAGES);
-
+  */
+  (void)as;
 	return 0;
 }
 
@@ -553,4 +577,35 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 
 	*ret = new;
 	return 0;
+}
+
+/* given a vaddr, search the pagetable for the corresponding entry.
+ * @return -1 if not found, a positive integer if found (the index of the
+ * ppage in the coremap). */
+int pagetable_search(struct pagetable *pt, vaddr_t vaddr) {
+  struct pagetable_entry *pe;
+  if(pt -> head == NULL)  // list is empty
+    return -1;
+  for(pe = pt -> head; pe != NULL; pe = pe -> next){
+    if(vaddr >= pe -> vaddr && vaddr < pe -> vaddr + PAGE_SIZE)
+      return pe -> ppage_index;
+  }
+  return -1;
+}
+
+/* add an entry to the pagetable, also allocates page in memory (dynamic allocation) */
+int pagetable_add(struct pagetable *pt, vaddr_t vaddr) {
+  paddr_t paddr;
+  struct pagetable_entry *p;     
+  int index = -1;
+  paddr = getppages(1);   // get a new page, notice that you don't know where it will be in physical memory
+  // TODO checks
+  index = paddr / PAGE_SIZE;
+  // create a new pte and update its fields 
+  p = kmalloc(sizeof(struct pagetable_entry));
+  p -> vaddr = vaddr & PAGE_FRAME;  // get starting vaddr of vpage
+  p -> ppage_index = index;
+  p -> next = pt -> head;
+  pt -> head = p;
+  return index;
 }
