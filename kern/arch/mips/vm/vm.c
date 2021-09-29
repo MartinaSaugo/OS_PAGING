@@ -401,16 +401,21 @@ as_create(void)
 
 void as_destroy(struct addrspace *as){
   dumbvm_can_sleep();
+  int spl, i;
+  spl = splhigh();
+  for (i=0; i<NUM_TLB; i++) 
+	tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
   freeppages(as->as_pbase1, as->as_npages1);
   freeppages(as->as_pbase2, as->as_npages2);
   freeppages(as->as_stackpbase, DUMBVM_STACKPAGES);
   kfree(as);
+ splx(spl);
 }
 
 void
 as_activate(void)
 {
-	int i, spl;
+	//int i, spl;
 	struct addrspace *as;
 
 	as = proc_getas();
@@ -418,14 +423,14 @@ as_activate(void)
 		return;
 	}
 
-	/* Disable interrupts on this CPU while frobbing the TLB. */
+	/* //Disable interrupts on this CPU while frobbing the TLB. 
 	spl = splhigh();
 
 	for (i=0; i<NUM_TLB; i++) {
 		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
 	}
 
-	splx(spl);
+	splx(spl); */
 }
 
 void
