@@ -11,4 +11,6 @@ typedef struct coremap_entry {
 } coremap_entry_t;
 
 
+int coremap_get_rr_victim(void);
+
 #endif

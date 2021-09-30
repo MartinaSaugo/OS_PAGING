@@ -153,11 +153,30 @@ getfreeppages(unsigned long npages) {
     	addr = (paddr_t) found*PAGE_SIZE;
     	freeRamFrames[found].paddr=(paddr_t) found*PAGE_SIZE;
   }
-  else {
-    addr = 0;
+  else { //in case I can't find a page I'mma steal it COMPLETELY RANDOM (can I? Am i stealing pieces from other things?)
+   	found=coremap_get_rr_victim();
+	for(i=found; i<found+np; i++)
+		freeRamFrames[i].status=DIRTY;
+	freeRamFrames[found].size=np;
+	addr=(paddr_t)found*PAGE_SIZE;
+	freeRamFrames[found].paddr=(paddr_t)found*PAGE_SIZE; 
   }
   spinlock_release(&freemem_lock);
   return addr;
+}
+
+int coremap_get_rr_victim(void)
+{
+	int victim;
+	static unsigned int next_victim=0;
+	victim=next_victim;
+	next_victim=(next_victim+1)%nRamFrames;
+	while(freeRamFrames[victim].status==FIXED) //must avoid kernel!
+	{
+		victim=next_victim;
+		next_victim=(next_victim+1)%nRamFrames;
+	}
+	return victim;
 }
 
 static paddr_t
@@ -165,22 +184,25 @@ getppages(unsigned long npages)
 {
   paddr_t addr;
   unsigned int i;
-  /* try freed pages first */
-  addr = getfreeppages(npages);
-  if (addr == 0) {
-    /* call stealmem (kernel only) */
+  if(!isTableActive())
+  {
     spinlock_acquire(&stealmem_lock);
     addr = ram_stealmem(npages);
     spinlock_release(&stealmem_lock);
+    return addr;
   }
-  if (addr!=0 && isTableActive()) {
+  /* try freed pages first */
+  addr = getfreeppages(npages);
+  if (addr == 0) 
+  {
+    //nothing special
+  } 
     spinlock_acquire(&freemem_lock);
     freeRamFrames[addr/PAGE_SIZE].size=npages;
     freeRamFrames[addr/PAGE_SIZE].paddr=addr;
     for (i=0; i<npages; i++)
 	freeRamFrames[(addr/PAGE_SIZE)+i].status=DIRTY;
     spinlock_release(&freemem_lock);
-  } 
   return addr;
 }
 
@@ -302,16 +324,6 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
 	stacktop = USERSTACK;
 
-//////////////////////////////////////////check inside tlb//////////////////////
-	for (i=0; i<NUM_TLB; i++) {
-		tlb_read(&ehi, &elo, i);
-		if (elo & TLBLO_VALID && ehi == faultaddress) {
-			kprintf("CHECKPOINT_ PAGE IS HERE! %d", i); 
-		}
-	}
-///////////////////////////////////////////////////////////////////////////////////
-
-
   // physical page index
   /* index = pagetable_search(as -> pagetable, faultaddress); */
   /* if(index == -1){ */
@@ -358,7 +370,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	}
 	//kprintf("dumbvm: Ran out of TLB entries - cannot handle page fault\n"); //no more!
 	//wmd
-	i = tlb_victim();
+	i = tlb_get_rr_victim();
         ehi = faultaddress;
 	elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
 	DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
@@ -368,9 +380,12 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	//return EFAULT;
 }
 
-int tlb_victim(void){
-	kprintf("Victim >:(\n");
-	return 1;
+int tlb_get_rr_victim(void){
+	int victim;
+	static unsigned int next_victim=0;
+	victim=next_victim;
+	next_victim=(next_victim+1)%NUM_TLB;
+	return victim;
 }
 
 struct addrspace *
