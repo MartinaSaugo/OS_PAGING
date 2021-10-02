@@ -10,7 +10,4 @@ typedef struct coremap_entry {
 	long size;      //= previous allocsize, now all in one
 } coremap_entry_t;
 
-
-int coremap_get_rr_victim(void);
-
 #endif

@@ -145,7 +145,7 @@ getfreeppages(unsigned long npages) {
     }
   }
 	
-  if (found>=0) {
+/*  if (found>=0) { //commentato perchè duplicazione di codice (vedi linea 184)
     	for (i=found; i<found+np; i++) {
 		freeRamFrames[i].status=DIRTY; //starts as dirty, becomes clean after flush   
     	}
@@ -153,30 +153,16 @@ getfreeppages(unsigned long npages) {
     	addr = (paddr_t) found*PAGE_SIZE;
     	freeRamFrames[found].paddr=(paddr_t) found*PAGE_SIZE;
   }
-  else { //in case I can't find a page I'mma steal it COMPLETELY RANDOM (can I? Am i stealing pieces from other things?)
-   	found=coremap_get_rr_victim();
-	for(i=found; i<found+np; i++)
-		freeRamFrames[i].status=DIRTY;
-	freeRamFrames[found].size=np;
-	addr=(paddr_t)found*PAGE_SIZE;
-	freeRamFrames[found].paddr=(paddr_t)found*PAGE_SIZE; 
+  else*/
+  if (found<0) //in case I can't find a page -> page replacement
+  { 
+   //TODO: page replacement, get a "found"
   }
+
+  addr = (paddr_t) found*PAGE_SIZE;
+
   spinlock_release(&freemem_lock);
   return addr;
-}
-
-int coremap_get_rr_victim(void)
-{
-	int victim;
-	static unsigned int next_victim=0;
-	victim=next_victim;
-	next_victim=(next_victim+1)%nRamFrames;
-	while(freeRamFrames[victim].status==FIXED) //must avoid kernel!
-	{
-		victim=next_victim;
-		next_victim=(next_victim+1)%nRamFrames;
-	}
-	return victim;
 }
 
 static paddr_t
@@ -234,7 +220,7 @@ alloc_kpages(unsigned npages)
 	if (pa==0) {
 		return 0;
 	}
-	return PADDR_TO_KVADDR(pa);
+	return PADDR_TO_KVADDR(pa); 
 }
 
 void 
@@ -283,21 +269,12 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		return EINVAL;
 	}
 
-	if (curproc == NULL) {
-		/*
-		 * No process. This is probably a kernel fault early
-		 * in boot. Return EFAULT so as to panic instead of
-		 * getting into an infinite faulting loop.
-		 */
+	if (curproc == NULL) { //No process. This is probably a kernel fault early in boot. Return EFAULT so as to panic instead of getting into an infinite faulting loop.
 		return EFAULT;
 	}
 
 	as = proc_getas();
-	if (as == NULL) {
-		/*
-		 * No address space set up. This is probably also a
-		 * kernel fault early in boot.
-		 */
+	if (as == NULL) { //No address space set up. This is probably also a kernel fault early in boot.
 		return EFAULT;
 	}
 
@@ -338,17 +315,17 @@ vm_fault(int faulttype, vaddr_t faultaddress)
   // if pagetable entry not found for faultaddress,
   // create a new pagetable entry in pagetable, and allocate a new physical page
 
-	if ((faultaddress >= vbase1 && faultaddress < vtop1) || (faultaddress >= vbase2 && faultaddress < vtop2) || (faultaddress >= stackbase && faultaddress < stacktop)) {
+  if ((faultaddress >= vbase1 && faultaddress < vtop1) || (faultaddress >= vbase2 && faultaddress < vtop2) || (faultaddress >= stackbase && faultaddress < stacktop)) 
+  {
     // valid address, let's see if it's present in pagetable
     index = pagetable_search(as -> pagetable, faultaddress);
     if(index == -1) // not present as pagetable entry
       index = pagetable_add(as -> pagetable, faultaddress);
 	  paddr = freeRamFrames[index].paddr;
-	}
-	else {
-    // segmentation fault 
-		return EFAULT;
-	}
+  }
+  else {// segmentation fault 
+	return EFAULT;
+  }
 
 	/* make sure it's page-aligned */
 	KASSERT((paddr & PAGE_FRAME) == paddr);
