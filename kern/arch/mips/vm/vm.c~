@@ -156,8 +156,11 @@ getfreeppages(unsigned long npages) {
   else*/
   if (found<0) //in case I can't find a page -> page replacement
   { 
-   //TODO: page replacement, return an address
+   //TODO: page replacement, get a "found"
   }
+
+  addr = (paddr_t) found*PAGE_SIZE;
+
   spinlock_release(&freemem_lock);
   return addr;
 }

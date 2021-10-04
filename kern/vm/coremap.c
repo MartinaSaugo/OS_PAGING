@@ -11,8 +11,7 @@ coremap_entry_t *freeRamFrames;
 long nRamFrames;
 int allocTableActive = 0;
 
-coremap_entry_t *
-coremap_init(void){
+coremap_entry_t * coremap_init(void){
   int i;
   coremap_entry_t *coremap;
   paddr_t paddr;
@@ -67,4 +66,5 @@ coremap_init(void){
 
   return coremap;
 }
+
 

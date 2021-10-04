@@ -137,7 +137,7 @@ getfreeppages(unsigned long npages) {
   for (i=0,first=found=-1; i<nRamFrames; i++) {
 	if (freeRamFrames[i].status==FREE||freeRamFrames[i].status==CLEAN){
 	if (i==0 || (freeRamFrames[i-1].status!=FREE && freeRamFrames[i-1].status!=CLEAN))
-        first = i; /* set first free in an interval */   
+        first = i; // set first free in an interval 
       if (i-first+1 >= np) {
         found = first;
         break;
@@ -145,15 +145,15 @@ getfreeppages(unsigned long npages) {
     }
   }
 	
-/*  if (found>=0) { //commentato perchè duplicazione di codice (vedi linea 184)
-    	for (i=found; i<found+np; i++) {
-		freeRamFrames[i].status=DIRTY; //starts as dirty, becomes clean after flush   
-    	}
-    	freeRamFrames[found].size = np;
-    	addr = (paddr_t) found*PAGE_SIZE;
-    	freeRamFrames[found].paddr=(paddr_t) found*PAGE_SIZE;
-  }
-  else*/
+//  if (found>=0) { //commentato perchè duplicazione di codice (vedi linea 184)
+//    	for (i=found; i<found+np; i++) {
+//		freeRamFrames[i].status=DIRTY; //starts as dirty, becomes clean after flush   
+//   	}
+//    	freeRamFrames[found].size = np;
+//    	addr = (paddr_t) found*PAGE_SIZE;
+//    	freeRamFrames[found].paddr=(paddr_t) found*PAGE_SIZE;
+//  }
+//  else
   if (found<0) //in case I can't find a page -> page replacement
   { 
    //TODO: page replacement, get a "found"

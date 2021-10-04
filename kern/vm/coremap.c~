@@ -11,14 +11,13 @@ coremap_entry_t *freeRamFrames;
 long nRamFrames;
 int allocTableActive = 0;
 
-coremap_entry_t *
-coremap_init(void){
+coremap_entry_t * coremap_init(void){
   int i;
   coremap_entry_t *coremap;
   paddr_t paddr;
   vaddr_t vaddr;
   paddr_t ramsize = ram_getsize(); // returns lastpaddr
-  paddr_t kernelsize=ram_getfirstfree(); //returns first available address after initializing kernel+exceptHandler...
+  paddr_t kernelsize=ram_getfirstfree(); //returns first available address after initializing kernel+exceptHandler... 
   long ramsizepages = ramsize / PAGE_SIZE;  // size of ram in pages
   nRamFrames=ramsizepages;
   long kernelpages;  // kernel size in pages
@@ -33,7 +32,11 @@ coremap_init(void){
   else 
     pages = (size / PAGE_SIZE) + 1; // if not a multiple of PAGE_SIZE...
 
-  paddr = ram_getmem(kernelpages, pages);
+  //paddr = ram_getmem(kernelpages, pages);
+  if(kernelpages+pages>ramsizepages)
+     panic("Too little memory for the bare minumin\n");
+  paddr=PAGE_SIZE*(kernelpages);
+
   if(paddr == 0) 
     return NULL;
   vaddr = PADDR_TO_KVADDR(paddr);
@@ -64,3 +67,40 @@ coremap_init(void){
   return coremap;
 }
 
+
+paddr_t getfreeppages(unsigned long npages) {
+  paddr_t addr;	
+  long i, first, found, np = (long)npages;
+
+  if (!isTableActive()) return 0; 
+  spinlock_acquire(&freemem_lock);
+  for (i=0,first=found=-1; i<nRamFrames; i++) {
+	if (freeRamFrames[i].status==FREE||freeRamFrames[i].status==CLEAN){
+	if (i==0 || (freeRamFrames[i-1].status!=FREE && freeRamFrames[i-1].status!=CLEAN))
+        first = i; // set first free in an interval 
+      if (i-first+1 >= np) {
+        found = first;
+        break;
+      }
+    }
+  }
+	
+//  if (found>=0) { //commentato perchè duplicazione di codice (vedi linea 184)
+//    	for (i=found; i<found+np; i++) {
+//		freeRamFrames[i].status=DIRTY; //starts as dirty, becomes clean after flush   
+//   	}
+//    	freeRamFrames[found].size = np;
+//    	addr = (paddr_t) found*PAGE_SIZE;
+//    	freeRamFrames[found].paddr=(paddr_t) found*PAGE_SIZE;
+//  }
+//  else
+  if (found<0) //in case I can't find a page -> page replacement
+  { 
+   //TODO: page replacement, get a "found"
+  }
+
+  addr = (paddr_t) found*PAGE_SIZE;
+
+  spinlock_release(&freemem_lock);
+  return addr;
+}

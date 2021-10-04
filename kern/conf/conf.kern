@@ -388,6 +388,7 @@ optfile   hello main/hello.c
 
 file      vm/coremap.c
 file      vm/pagetable.c
+file	  vm/swapfile.c
 
 defoption syscalls
 optfile   syscalls syscall/file_syscalls.c

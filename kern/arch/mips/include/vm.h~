@@ -113,6 +113,8 @@ paddr_t ram_getsize(void);
 paddr_t ram_getfirstfree(void);
 paddr_t ram_getmem(unsigned long offsetpages, unsigned long npages);
 
+//coremap_entry_t *coremap_init(void);
+
 /*
  * TLB shootdown bits.
  *

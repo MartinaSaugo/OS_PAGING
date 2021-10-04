@@ -49,10 +49,12 @@
 #include <syscall.h>
 #include <test.h>
 #include <version.h>
+#include <swapfile.h>
 #include "hello.h"
 #include "autoconf.h"  // for pseudoconfig
 
 #include <coremap.h>
+
 
 
 /*
@@ -79,7 +81,7 @@ static const char harvard_copyright[] =
  * Initial boot sequence.
  */
 
-extern coremap_entry_t *freeRamFrames;
+//extern coremap_entry_t *freeRamFrames;
 
 static
 void
@@ -101,7 +103,6 @@ boot(void)
 	 * anything at all. You can make it larger though (it's in
 	 * dev/generic/console.c).
 	 */
-
 	kprintf("\n");
 	kprintf("OS/161 base system version %s\n", BASE_VERSION);
 	kprintf("%s", harvard_copyright);
@@ -113,10 +114,6 @@ boot(void)
 
 	/* Early initialization. */
 	ram_bootstrap();
-  /*coremap_entry_t *coremap = coremap_init();
-  (void) coremap;*/
-
-	//freeRamFrames declared in coremap.h
 	proc_bootstrap();
 	thread_bootstrap();
 	hardclock_bootstrap();
@@ -222,6 +219,7 @@ kmain(char *arguments)
 	boot();
         
 	freeRamFrames=coremap_init();
+	swap_init();
 
 	#if OPT_HELLO
 	hello();

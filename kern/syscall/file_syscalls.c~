@@ -81,6 +81,7 @@ int sys_close (int i)
 	if(v==NULL)
 		return -1;	
 	vfs_close(v);
+	curproc->fileTable[i]=NULL;
 	return 0;		
 }
 
