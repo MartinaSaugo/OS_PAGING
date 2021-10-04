@@ -4,4 +4,4 @@ emu_att.o: ../../dev/lamebus/emu_att.c ../../include/types.h \
  opt-noasserts.h ../../dev/lamebus/lamebus.h ../../include/cpu.h \
  ../../include/spinlock.h includelinks/machine/spinlock.h \
  ../../include/threadlist.h includelinks/machine/vm.h \
- ../../include/coremap.h ../../dev/lamebus/emu.h autoconf.h
+ ../../dev/lamebus/emu.h autoconf.h

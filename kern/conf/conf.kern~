@@ -387,7 +387,7 @@ file      main/menu.c
 optfile   hello main/hello.c
 
 file      vm/coremap.c
-file      vm/pagetable.c
+file      vm/pt.c
 file	  vm/swapfile.c
 
 defoption syscalls

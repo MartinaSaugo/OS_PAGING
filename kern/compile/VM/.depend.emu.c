@@ -9,6 +9,6 @@ emu.o: ../../dev/lamebus/emu.c ../../include/types.h \
  ../../include/synch.h ../../include/spinlock.h \
  includelinks/machine/spinlock.h ../../dev/lamebus/emu.h \
  includelinks/platform/bus.h includelinks/machine/vm.h \
- ../../include/coremap.h ../../dev/lamebus/lamebus.h ../../include/cpu.h \
+ ../../dev/lamebus/lamebus.h ../../include/cpu.h \
  ../../include/threadlist.h ../../include/vfs.h ../../include/emufs.h \
  ../../include/fs.h ../../include/vnode.h autoconf.h

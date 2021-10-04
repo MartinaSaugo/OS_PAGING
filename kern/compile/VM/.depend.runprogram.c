@@ -9,6 +9,6 @@ runprogram.o: ../../syscall/runprogram.c ../../include/types.h \
  ../../include/array.h ../../include/threadlist.h \
  includelinks/machine/thread.h ../../include/setjmp.h \
  includelinks/kern/machine/setjmp.h ../../include/addrspace.h \
- ../../include/vm.h includelinks/machine/vm.h ../../include/coremap.h \
- ../../include/pt.h ../../include/cpu.h ../../include/vfs.h \
+ ../../include/vm.h includelinks/machine/vm.h ../../include/pt.h \
+ ../../include/cpu.h ../../include/coremap.h ../../include/vfs.h \
  ../../include/syscall.h opt-syscalls.h ../../include/test.h

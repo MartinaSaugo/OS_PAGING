@@ -30,7 +30,7 @@
 #ifndef _MIPS_VM_H_
 #define _MIPS_VM_H_
 
-#include <coremap.h>
+//#include <coremap.h>
 
 
 /*

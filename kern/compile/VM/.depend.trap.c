@@ -6,9 +6,9 @@ trap.o: ../../arch/mips/locore/trap.c ../../include/types.h \
  includelinks/mips/specialreg.h includelinks/mips/trapframe.h \
  ../../include/cpu.h ../../include/spinlock.h \
  includelinks/machine/spinlock.h ../../include/threadlist.h \
- includelinks/machine/vm.h ../../include/coremap.h ../../include/spl.h \
- ../../include/thread.h ../../include/array.h \
- includelinks/machine/thread.h ../../include/setjmp.h \
- includelinks/kern/machine/setjmp.h ../../include/current.h \
- includelinks/machine/current.h ../../include/vm.h \
- ../../include/mainbus.h ../../include/syscall.h opt-syscalls.h
+ includelinks/machine/vm.h ../../include/spl.h ../../include/thread.h \
+ ../../include/array.h includelinks/machine/thread.h \
+ ../../include/setjmp.h includelinks/kern/machine/setjmp.h \
+ ../../include/current.h includelinks/machine/current.h \
+ ../../include/vm.h ../../include/mainbus.h ../../include/syscall.h \
+ opt-syscalls.h

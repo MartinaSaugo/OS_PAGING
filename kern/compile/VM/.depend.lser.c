@@ -3,5 +3,5 @@ lser.o: ../../dev/lamebus/lser.c ../../include/types.h \
  includelinks/machine/types.h ../../include/lib.h ../../include/cdefs.h \
  opt-noasserts.h ../../include/spinlock.h includelinks/machine/spinlock.h \
  includelinks/platform/bus.h includelinks/machine/vm.h \
- ../../include/coremap.h ../../dev/lamebus/lamebus.h ../../include/cpu.h \
+ ../../dev/lamebus/lamebus.h ../../include/cpu.h \
  ../../include/threadlist.h ../../dev/lamebus/lser.h autoconf.h

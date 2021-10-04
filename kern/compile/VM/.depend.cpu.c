@@ -5,6 +5,6 @@ cpu.o: ../../arch/mips/thread/cpu.c ../../include/types.h \
  includelinks/mips/trapframe.h includelinks/platform/maxcpus.h \
  ../../include/cpu.h ../../include/spinlock.h \
  includelinks/machine/spinlock.h ../../include/threadlist.h \
- includelinks/machine/vm.h ../../include/coremap.h ../../include/thread.h \
- ../../include/array.h includelinks/machine/thread.h \
- ../../include/setjmp.h includelinks/kern/machine/setjmp.h
+ includelinks/machine/vm.h ../../include/thread.h ../../include/array.h \
+ includelinks/machine/thread.h ../../include/setjmp.h \
+ includelinks/kern/machine/setjmp.h

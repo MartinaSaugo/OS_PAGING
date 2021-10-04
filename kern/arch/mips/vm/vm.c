@@ -35,12 +35,12 @@
 #include <spinlock.h>
 #include <proc.h>
 #include <current.h>
-#include <mips/tlb.h>
 #include <addrspace.h>
 #include <vm.h>
 
 #include <pt.h>
 #include <coremap.h>
+#include <vm_tlb.h>
 
 /*
  * Dumb MIPS-only "VM system" that is intended to only be just barely
@@ -203,14 +203,6 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	splx(spl);
 	return 0;
 	//return EFAULT;
-}
-
-int tlb_get_rr_victim(void){
-	int victim;
-	static unsigned int next_victim=0;
-	victim=next_victim;
-	next_victim=(next_victim+1)%NUM_TLB;
-	return victim;
 }
 
 struct addrspace *
