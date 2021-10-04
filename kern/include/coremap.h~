@@ -1,6 +1,7 @@
 #ifndef _COREMAP_H_
 #define _COREMAP_H_
 #include <machine/vm.h> //why?
+#include <spinlock.h>
 
 typedef enum {FREE, CLEAN, DIRTY, FIXED} status_t;
 
@@ -11,8 +12,12 @@ typedef struct coremap_entry {
 } coremap_entry_t;
 
 coremap_entry_t *freeRamFrames;
+int nRamFrames;
 
 coremap_entry_t * coremap_init(void);
 paddr_t getfreeppages(unsigned long npages);
+int isTableActive (void);
+paddr_t getppages(unsigned long npages);
+int freeppages(paddr_t addr, unsigned long npages);
 
 #endif

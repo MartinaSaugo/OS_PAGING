@@ -66,25 +66,25 @@
 /*
  * Wrap ram_stealmem in a spinlock.
  */
-static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
-static struct spinlock freemem_lock = SPINLOCK_INITIALIZER;
+//static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
+//static struct spinlock freemem_lock = SPINLOCK_INITIALIZER;
 
 //static unsigned char *freeRamFrames = NULL;
 //static unsigned long *allocSize = NULL;
 //static coremap_entry_t *freeRamFrames = NULL;
 //static int nRamFrames = 0;
 //static int allocTableActive = 0;
-extern int allocTableActive;
-extern coremap_entry_t *freeRamFrames;
-extern int nRamFrames;
+//extern int allocTableActive;
+//extern coremap_entry_t *freeRamFrames;
+//extern int nRamFrames;
 
-static int isTableActive () {
+/*static int isTableActive () {
   int active;
   spinlock_acquire(&freemem_lock);
   active = allocTableActive;
   spinlock_release(&freemem_lock);
   return active;
-}
+}*/
 
 void
 vm_bootstrap(void)
@@ -113,7 +113,7 @@ vm_bootstrap(void)
  * avoid the situation where syscall-layer code that works ok with
  * dumbvm starts blowing up during the VM assignment.
  */
-static void
+void
 dumbvm_can_sleep(void)
 {
 	if (CURCPU_EXISTS()) {
@@ -125,9 +125,9 @@ dumbvm_can_sleep(void)
 	}
 }
 
-extern int kernelAlloc;
+//extern int kernelAlloc;
 
-static paddr_t 
+/*static paddr_t 
 getfreeppages(unsigned long npages) {
   paddr_t addr;	
   long i, first, found, np = (long)npages;
@@ -137,7 +137,7 @@ getfreeppages(unsigned long npages) {
   for (i=0,first=found=-1; i<nRamFrames; i++) {
 	if (freeRamFrames[i].status==FREE||freeRamFrames[i].status==CLEAN){
 	if (i==0 || (freeRamFrames[i-1].status!=FREE && freeRamFrames[i-1].status!=CLEAN))
-        first = i; /* set first free in an interval */   
+        first = i; // set first free in an interval 
       if (i-first+1 >= np) {
         found = first;
         break;
@@ -145,15 +145,15 @@ getfreeppages(unsigned long npages) {
     }
   }
 	
-/*  if (found>=0) { //commentato perchè duplicazione di codice (vedi linea 184)
-    	for (i=found; i<found+np; i++) {
-		freeRamFrames[i].status=DIRTY; //starts as dirty, becomes clean after flush   
-    	}
-    	freeRamFrames[found].size = np;
-    	addr = (paddr_t) found*PAGE_SIZE;
-    	freeRamFrames[found].paddr=(paddr_t) found*PAGE_SIZE;
-  }
-  else*/
+//  if (found>=0) { //commentato perchè duplicazione di codice (vedi linea 184)
+//    	for (i=found; i<found+np; i++) {
+//		freeRamFrames[i].status=DIRTY; //starts as dirty, becomes clean after flush   
+//   	}
+//    	freeRamFrames[found].size = np;
+//    	addr = (paddr_t) found*PAGE_SIZE;
+//    	freeRamFrames[found].paddr=(paddr_t) found*PAGE_SIZE;
+//  }
+//  else
   if (found<0) //in case I can't find a page -> page replacement
   { 
    //TODO: page replacement, get a "found"
@@ -177,7 +177,7 @@ getppages(unsigned long npages)
     spinlock_release(&stealmem_lock);
     return addr;
   }
-  /* try freed pages first */
+  // try freed pages first 
   addr = getfreeppages(npages);
   if (addr == 0) 
   {
@@ -210,7 +210,7 @@ freeppages(paddr_t addr, unsigned long npages){
   return 1;
 }
 
-/* Allocate/free some kernel-space virtual pages */
+// Allocate/free some kernel-space virtual pages 
 vaddr_t
 alloc_kpages(unsigned npages)
 {
@@ -233,7 +233,7 @@ free_kpages(vaddr_t addr){
     KASSERT(nRamFrames>first);
     freeppages(paddr, freeRamFrames[first].size);	
   }
-}
+}*/
 
 void
 vm_tlbshootdown(const struct tlbshootdown *ts)
