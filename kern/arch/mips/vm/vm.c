@@ -39,7 +39,7 @@
 #include <addrspace.h>
 #include <vm.h>
 
-#include <pagetable.h>
+#include <pt.h>
 #include <coremap.h>
 
 /*
@@ -220,13 +220,8 @@ as_create(void)
 	if (as==NULL) {
 		return NULL;
 	}
-  as -> pagetable = kmalloc(sizeof(struct pagetable));
-  if(as -> pagetable == NULL)
-    return NULL;
-  // TODO check
-  as -> pagetable -> head = NULL;
-  as -> pagetable -> tail = NULL;
-  as -> pagetable -> npages = 0;
+  	
+	as->pagetable=pagetable_init();
 
 	as->as_vbase1 = 0;
 	as->as_pbase1 = 0;
@@ -262,15 +257,6 @@ as_activate(void)
 	if (as == NULL) {
 		return;
 	}
-
-	/* //Disable interrupts on this CPU while frobbing the TLB. 
-	spl = splhigh();
-
-	for (i=0; i<NUM_TLB; i++) {
-		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
-	}
-
-	splx(spl); */
 }
 
 void
@@ -422,35 +408,4 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 
 	*ret = new;
 	return 0;
-}
-
-/* given a vaddr, search the pagetable for the corresponding entry.
- * @return -1 if not found, a positive integer if found (the index of the
- * ppage in the coremap). */
-int pagetable_search(struct pagetable *pt, vaddr_t vaddr) {
-  struct pagetable_entry *pe;
-  if(pt -> head == NULL)  // list is empty
-    return -1;
-  for(pe = pt -> head; pe != NULL; pe = pe -> next){
-    if(vaddr >= pe -> vaddr && vaddr < pe -> vaddr + PAGE_SIZE)
-      return pe -> ppage_index;
-  }
-  return -1;
-}
-
-/* add an entry to the pagetable, also allocates page in memory (dynamic allocation) */
-int pagetable_add(struct pagetable *pt, vaddr_t vaddr) {
-  paddr_t paddr;
-  struct pagetable_entry *p;     
-  int index = -1;
-  paddr = getppages(1);   // get a new page, notice that you don't know where it will be in physical memory
-  // TODO checks
-  index = paddr / PAGE_SIZE;
-  // create a new pte and update its fields 
-  p = kmalloc(sizeof(struct pagetable_entry));
-  p -> vaddr = vaddr & PAGE_FRAME;  // get starting vaddr of vpage
-  p -> ppage_index = index;
-  p -> next = pt -> head;
-  pt -> head = p;
-  return index;
 }

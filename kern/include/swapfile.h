@@ -5,7 +5,7 @@
 #include <current.h> //perchè serve?
 #include <vnode.h>
 #include <addrspace.h>
-#include <pagetable.h>
+#include <pt.h>
 
 #define SWAPSIZE 9*1024*1024 //size of swap file
 #define SWAPSLOTS SWAPSIZE/ PAGE_SIZE

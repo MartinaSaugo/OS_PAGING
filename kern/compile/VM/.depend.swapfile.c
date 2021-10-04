@@ -8,7 +8,7 @@ swapfile.o: ../../vm/swapfile.c ../../include/swapfile.h \
  includelinks/machine/thread.h ../../include/setjmp.h \
  includelinks/kern/machine/setjmp.h ../../include/vnode.h \
  ../../include/addrspace.h ../../include/vm.h includelinks/machine/vm.h \
- ../../include/coremap.h ../../include/pagetable.h ../../include/cpu.h \
+ ../../include/coremap.h ../../include/pt.h ../../include/cpu.h \
  ../../include/proc.h ../../include/limits.h ../../include/kern/limits.h \
  ../../include/vfs.h ../../include/uio.h ../../include/kern/iovec.h \
  ../../include/elf.h includelinks/machine/elf.h ../../include/spl.h \

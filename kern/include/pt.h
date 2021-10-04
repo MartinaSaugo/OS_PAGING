@@ -22,7 +22,7 @@ typedef struct pagetable {
   int npages;
 } pagetable_t;
 
-pagetable_t pagetable_init(void);
+pagetable_t* pagetable_init(void);
 int pagetable_search(struct pagetable *, vaddr_t);
 int pagetable_add(struct pagetable *, vaddr_t);
 

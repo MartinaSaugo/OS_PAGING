@@ -8,7 +8,7 @@
 #include <pagetable.h>
 
 #define SWAPSIZE 9*1024*1024 //size of swap file
-#define SWAPSLOTS SWAPSIZE/ PAGESIZE
+#define SWAPSLOTS SWAPSIZE/ PAGE_SIZE
 
 //structs
 

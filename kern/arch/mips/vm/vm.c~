@@ -39,7 +39,7 @@
 #include <addrspace.h>
 #include <vm.h>
 
-#include <pagetable.h>
+#include <pt.h>
 #include <coremap.h>
 
 /*
@@ -62,48 +62,9 @@
 /* (this must be > 64K so argument blocks of size ARG_MAX will fit) */
 #define DUMBVM_STACKPAGES    18
 
-
-/*
- * Wrap ram_stealmem in a spinlock.
- */
-//static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
-//static struct spinlock freemem_lock = SPINLOCK_INITIALIZER;
-
-//static unsigned char *freeRamFrames = NULL;
-//static unsigned long *allocSize = NULL;
-//static coremap_entry_t *freeRamFrames = NULL;
-//static int nRamFrames = 0;
-//static int allocTableActive = 0;
-//extern int allocTableActive;
-//extern coremap_entry_t *freeRamFrames;
-//extern int nRamFrames;
-
-/*static int isTableActive () {
-  int active;
-  spinlock_acquire(&freemem_lock);
-  active = allocTableActive;
-  spinlock_release(&freemem_lock);
-  return active;
-}*/
-
 void
 vm_bootstrap(void)
-{
-  /*int i;
-  nRamFrames = ((int)ram_getsize())/PAGE_SIZE;  
-
-  freeRamFrames = (coremap_entry_t*) kmalloc (sizeof(coremap_entry_t)*nRamFrames);
-  if(freeRamFrames==NULL) return;
-
-  for (i=0; i<nRamFrames; i++) {    
-    freeRamFrames[i].status = CLEAN;
-    freeRamFrames[i].paddr = -1;
-    freeRamFrames[i].size = -1; 
-  }
-
-  spinlock_acquire(&freemem_lock);
-  allocTableActive = 1;
-  spinlock_release(&freemem_lock);*/
+{ // do nothing
 }
 
 /*
@@ -113,8 +74,7 @@ vm_bootstrap(void)
  * avoid the situation where syscall-layer code that works ok with
  * dumbvm starts blowing up during the VM assignment.
  */
-void
-dumbvm_can_sleep(void)
+void dumbvm_can_sleep(void)
 {
 	if (CURCPU_EXISTS()) {
 		/* must not hold spinlocks */
@@ -124,116 +84,6 @@ dumbvm_can_sleep(void)
 		KASSERT(curthread->t_in_interrupt == 0);
 	}
 }
-
-//extern int kernelAlloc;
-
-/*static paddr_t 
-getfreeppages(unsigned long npages) {
-  paddr_t addr;	
-  long i, first, found, np = (long)npages;
-
-  if (!isTableActive()) return 0; 
-  spinlock_acquire(&freemem_lock);
-  for (i=0,first=found=-1; i<nRamFrames; i++) {
-	if (freeRamFrames[i].status==FREE||freeRamFrames[i].status==CLEAN){
-	if (i==0 || (freeRamFrames[i-1].status!=FREE && freeRamFrames[i-1].status!=CLEAN))
-        first = i; // set first free in an interval 
-      if (i-first+1 >= np) {
-        found = first;
-        break;
-      }
-    }
-  }
-	
-//  if (found>=0) { //commentato perchè duplicazione di codice (vedi linea 184)
-//    	for (i=found; i<found+np; i++) {
-//		freeRamFrames[i].status=DIRTY; //starts as dirty, becomes clean after flush   
-//   	}
-//    	freeRamFrames[found].size = np;
-//    	addr = (paddr_t) found*PAGE_SIZE;
-//    	freeRamFrames[found].paddr=(paddr_t) found*PAGE_SIZE;
-//  }
-//  else
-  if (found<0) //in case I can't find a page -> page replacement
-  { 
-   //TODO: page replacement, get a "found"
-  }
-
-  addr = (paddr_t) found*PAGE_SIZE;
-
-  spinlock_release(&freemem_lock);
-  return addr;
-}
-
-static paddr_t
-getppages(unsigned long npages)
-{
-  paddr_t addr;
-  unsigned int i;
-  if(!isTableActive())
-  {
-    spinlock_acquire(&stealmem_lock);
-    addr = ram_stealmem(npages);
-    spinlock_release(&stealmem_lock);
-    return addr;
-  }
-  // try freed pages first 
-  addr = getfreeppages(npages);
-  if (addr == 0) 
-  {
-    //nothing special
-  } 
-    spinlock_acquire(&freemem_lock);
-    freeRamFrames[addr/PAGE_SIZE].size=npages;
-    freeRamFrames[addr/PAGE_SIZE].paddr=addr;
-    for (i=0; i<npages; i++)
-	freeRamFrames[(addr/PAGE_SIZE)+i].status=DIRTY;
-    spinlock_release(&freemem_lock);
-  return addr;
-}
-
-static int 
-freeppages(paddr_t addr, unsigned long npages){
-  long i, first, np=(long)npages;	
-  if (!isTableActive()) return 0; 
-  first = addr/PAGE_SIZE;
-  //KASSERT(allocSize!=NULL);
-  KASSERT(freeRamFrames!=NULL);
-  KASSERT(nRamFrames>first);
-
-  spinlock_acquire(&freemem_lock);
-  for (i=first; i<first+np; i++) {
-    freeRamFrames[i].status = FREE;
-  }
-  spinlock_release(&freemem_lock);
-
-  return 1;
-}
-
-// Allocate/free some kernel-space virtual pages 
-vaddr_t
-alloc_kpages(unsigned npages)
-{
-	paddr_t pa;
-	dumbvm_can_sleep();
-	pa = getppages(npages);
-	if (pa==0) {
-		return 0;
-	}
-	return PADDR_TO_KVADDR(pa); 
-}
-
-void 
-free_kpages(vaddr_t addr){
-  if (isTableActive()) {
-    paddr_t paddr = addr - MIPS_KSEG0;
-    long first = paddr/PAGE_SIZE;	
-    //KASSERT(allocSize!=NULL);
-    KASSERT(freeRamFrames!=NULL);
-    KASSERT(nRamFrames>first);
-    freeppages(paddr, freeRamFrames[first].size);	
-  }
-}*/
 
 void
 vm_tlbshootdown(const struct tlbshootdown *ts)
@@ -257,10 +107,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
 
 	switch (faulttype) {
-	    case VM_FAULT_READONLY:
-		  /* We always create pages read-write, so we can't get this */
+	    case VM_FAULT_READONLY: // We always create pages read-write, so we can't get this 
 		  panic("dumbvm: got VM_FAULT_READONLY\n");
-		  //kprintf("dumbvm: got VM_FAULT_READONLY\n");
 	    case VM_FAULT_READ:
 		    break;
 	    case VM_FAULT_WRITE:
@@ -278,7 +126,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		return EFAULT;
 	}
 
-	/* Assert that the address space has been set up properly. */
+	// Assert that the address space has been set up properly. 
 	KASSERT(as->as_vbase1 != 0);
 	// KASSERT(as->as_pbase1 != 0);
 	KASSERT(as->as_npages1 != 0);
@@ -372,13 +220,14 @@ as_create(void)
 	if (as==NULL) {
 		return NULL;
 	}
-  as -> pagetable = kmalloc(sizeof(struct pagetable));
-  if(as -> pagetable == NULL)
-    return NULL;
-  // TODO check
-  as -> pagetable -> head = NULL;
-  as -> pagetable -> tail = NULL;
-  as -> pagetable -> npages = 0;
+  	/*as -> pagetable = kmalloc(sizeof(struct pagetable));
+  	if(as -> pagetable == NULL)
+    	return NULL;
+  	// TODO check
+  	as -> pagetable -> head = NULL;
+  	as -> pagetable -> tail = NULL;
+  	as -> pagetable -> npages = 0;*/
+	as->pagetable=pagetable_init();
 
 	as->as_vbase1 = 0;
 	as->as_pbase1 = 0;
@@ -576,10 +425,11 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	return 0;
 }
 
-/* given a vaddr, search the pagetable for the corresponding entry.
- * @return -1 if not found, a positive integer if found (the index of the
- * ppage in the coremap). */
-int pagetable_search(struct pagetable *pt, vaddr_t vaddr) {
+// given a vaddr, search the pagetable for the corresponding entry.
+// @return -1 if not found, a positive integer if found (the index of the
+// ppage in the coremap). 
+
+/*int pagetable_search(struct pagetable *pt, vaddr_t vaddr) {
   struct pagetable_entry *pe;
   if(pt -> head == NULL)  // list is empty
     return -1;
@@ -590,7 +440,7 @@ int pagetable_search(struct pagetable *pt, vaddr_t vaddr) {
   return -1;
 }
 
-/* add an entry to the pagetable, also allocates page in memory (dynamic allocation) */
+// add an entry to the pagetable, also allocates page in memory (dynamic allocation) 
 int pagetable_add(struct pagetable *pt, vaddr_t vaddr) {
   paddr_t paddr;
   struct pagetable_entry *p;     
@@ -605,4 +455,4 @@ int pagetable_add(struct pagetable *pt, vaddr_t vaddr) {
   p -> next = pt -> head;
   pt -> head = p;
   return index;
-}
+}*/
