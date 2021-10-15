@@ -6,8 +6,8 @@
 #include <vfs.h> 
 #include <vm.h> 
 #include <uio.h> 
-#include <cpu.h> //?
-#include <elf.h> //?
+#include <cpu.h>
+#include <elf.h> 
 #include <spl.h>  
 #include <synch.h>
 
@@ -23,7 +23,6 @@ static struct spinlock *swapspin;
 void swap_init (void)
 {
 	int i;
-	//CAN I DO IT W/ SYS_OPEN?
 	int res = vfs_open(swapfile, O_RDWR|O_CREAT|O_TRUNC, 0, &swapspace); //0=mode, not supported
 	if(res)
 		panic("CAN'T OPEN SWAP FILE, ERROR: %d\n", res);
@@ -40,4 +39,35 @@ void swap_init (void)
 	return;
 }
 
+int write_page(int index, paddr_t page)
+{
+	//struct thread *th=curthread; //serve?
+	struct iovec iov;
+	struct uio pageuio;
+	
+	int result=0;
+	//MUST FIX! -> significa che ci serve l'indirizzo virtuale? In teoria ce l'abbiamo(?)
+	page=PADDR_TO_KVADDR(page);
+	off_t pos= index*PAGE_SIZE; 
+	
+	uio_kinit(&iov, &pageuio, (void*)page, PAGE_SIZE, pos, UIO_WRITE);
+	result=VOP_WRITE(swapspace, &pageuio);
+	return result;
+}
 
+int read_page(int index, paddr_t page)
+{
+	struct iovec iov;
+	struct uio pageuio;
+	int result=0;
+	//MUST FIX!
+	page=PADDR_TO_KVADDR(page);
+	off_t pos=index*PAGE_SIZE;
+	uio_kinit(&iov, &pageuio, (void*)page, PAGE_SIZE, pos, UIO_READ);
+	result=VOP_READ(swapspace, &pageuio);
+}	
+
+int evict_page(struct page* page); 
+int swap_out(struct page* page);
+int swap_in (struct page* page); 
+int swap_clean(struct addrspace *as, vaddr_t va);
