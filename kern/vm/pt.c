@@ -12,15 +12,18 @@ pagetable_t* pagetable_init(void)
 }
 
 /* given a vaddr, search the pagetable for the corresponding entry.
- * @return -1 if not found, a positive integer if found (the index of the
- * ppage in the coremap). */
+ * @return -1 if not found, -2 if swapped,  
+ * a positive integer if found (the index of the ppage in the coremap). */
 int pagetable_search(struct pagetable *pt, vaddr_t vaddr) {
   struct pagetable_entry *pe;
   if(pt -> head == NULL)  // list is empty
     return -1;
   for(pe = pt -> head; pe != NULL; pe = pe -> next){
-    if(vaddr >= pe -> vaddr && vaddr < pe -> vaddr + PAGE_SIZE)
-      return pe -> ppage_index;
+    if(vaddr >= pe -> vaddr && vaddr < pe -> vaddr + PAGE_SIZE){
+		if(pe -> status == SWAPPED)
+			return -2;
+	    return pe -> ppage_index;
+	}
   }
   return -1;
 }

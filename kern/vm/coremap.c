@@ -8,8 +8,8 @@
 #include <spinlock.h>
 
 int allocTableActive=0;
-struct spinlock stealmem_lock= SPINLOCK_INITIALIZER;;
-struct spinlock freemem_lock= SPINLOCK_INITIALIZER;;
+struct spinlock stealmem_lock= SPINLOCK_INITIALIZER;
+struct spinlock freemem_lock= SPINLOCK_INITIALIZER;
 
 coremap_entry_t * coremap_init(void){
   int i;
@@ -71,9 +71,11 @@ paddr_t getfreeppages(unsigned long npages) {
   paddr_t addr;	
   long i, first, found, np = (long)npages;
 
-  if (!isTableActive()) return 0; 
+  if (!isTableActive()) 
+	  return 0; 
+
   spinlock_acquire(&freemem_lock);
-  for (i=0,first=found=-1; i<nRamFrames; i++) {
+  for (i=0, first=found=-1; i<nRamFrames; i++) {
 	if (freeRamFrames[i].status==FREE||freeRamFrames[i].status==CLEAN){
 	if (i==0 || (freeRamFrames[i-1].status!=FREE && freeRamFrames[i-1].status!=CLEAN))
         first = i; // set first free in an interval 
@@ -83,23 +85,14 @@ paddr_t getfreeppages(unsigned long npages) {
       }
     }
   }
-	
-//  if (found>=0) { //commentato perchè duplicazione di codice (vedi linea 184)
-//    	for (i=found; i<found+np; i++) {
-//		freeRamFrames[i].status=DIRTY; //starts as dirty, becomes clean after flush   
-//   	}
-//    	freeRamFrames[found].size = np;
-//    	addr = (paddr_t) found*PAGE_SIZE;
-//    	freeRamFrames[found].paddr=(paddr_t) found*PAGE_SIZE;
-//  }
-//  else
-  if (found<0) //in case I can't find a page -> page replacement
-  { 
-   //TODO: page replacement, get a "found"
-	panic("NO PAGES!");
-  }
+  // try to find: if not found, found = -1 
+  
+  // no more free space (we return 0 as special value since first pages
+  // are occupied by kernel (FIXED) and kernel doesn't use coremap...)
+  if (found < 0) 
+	  return 0x0;
 
-  addr = (paddr_t) found*PAGE_SIZE;
+  addr = (paddr_t) found * PAGE_SIZE;
 
   spinlock_release(&freemem_lock);
   return addr;
@@ -126,16 +119,16 @@ paddr_t getppages(unsigned long npages)
   }
   // try freed pages first 
   addr = getfreeppages(npages);
-  if (addr == 0) 
-  {
-    //nothing special
-  } 
-    spinlock_acquire(&freemem_lock);
-    freeRamFrames[addr/PAGE_SIZE].size=npages;
-    freeRamFrames[addr/PAGE_SIZE].paddr=addr;
-    for (i=0; i<npages; i++)
+  if (addr == 0){
+	  // at this point getfreeppages should never return a 0 value
+	  panic("No more free pages, you should rely on swap.\n");
+  }
+  spinlock_acquire(&freemem_lock);
+  freeRamFrames[addr/PAGE_SIZE].size=npages;
+  freeRamFrames[addr/PAGE_SIZE].paddr=addr;
+  for (i=0; i<npages; i++)
 	freeRamFrames[(addr/PAGE_SIZE)+i].status=DIRTY;
-    spinlock_release(&freemem_lock);
+  spinlock_release(&freemem_lock);
   return addr;
 }
 
