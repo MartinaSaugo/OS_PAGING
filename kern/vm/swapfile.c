@@ -65,9 +65,10 @@ int read_page(int index, paddr_t page)
 	off_t pos=index*PAGE_SIZE;
 	uio_kinit(&iov, &pageuio, (void*)page, PAGE_SIZE, pos, UIO_READ);
 	result=VOP_READ(swapspace, &pageuio);
+	return result;
 }	
 
-int evict_page(struct page* page); 
+/*int evict_page(struct page* page); 
 int swap_out(struct page* page);
 int swap_in (struct page* page); 
-int swap_clean(struct addrspace *as, vaddr_t va);
+int swap_clean(struct addrspace *as, vaddr_t va);*/

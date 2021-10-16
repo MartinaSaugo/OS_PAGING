@@ -67,7 +67,7 @@ int read_page(int index, paddr_t page)
 	result=VOP_READ(swapspace, &pageuio);
 }	
 
-//int evict_page(struct page* page); 
+/*int evict_page(struct page* page); 
 int swap_out(struct page* page);
 int swap_in (struct page* page); 
-int swap_clean(struct addrspace *as, vaddr_t va);
+int swap_clean(struct addrspace *as, vaddr_t va);*/

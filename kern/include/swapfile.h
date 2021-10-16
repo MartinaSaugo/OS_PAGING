@@ -23,9 +23,9 @@ typedef struct swap_entry {
 void swap_init(void);
 int write_page(int index, paddr_t page);
 int read_page(int index, paddr_t page);
-int evict_page(struct page* page);
+/*int evict_page(struct page* page);
 int swap_out(struct page* page); 
 int swap_in (struct page* page); 
-int swap_clean(struct addrspace *as, vaddr_t va);
+int swap_clean(struct addrspace *as, vaddr_t va);*/
 
 #endif

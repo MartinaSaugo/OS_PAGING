@@ -154,3 +154,26 @@ int freeppages(paddr_t addr, unsigned long npages){
 
   return 1;
 }
+
+vaddr_t alloc_kpages(unsigned npages)
+{
+	paddr_t pa;
+	dumbvm_can_sleep();
+	pa = getppages(npages);
+	if (pa==0) {
+		return 0;
+	}
+	return PADDR_TO_KVADDR(pa); 
+}
+
+void free_kpages(vaddr_t addr)
+{
+  if (isTableActive()) {
+    paddr_t paddr = addr - MIPS_KSEG0;
+    long first = paddr/PAGE_SIZE;	
+    //KASSERT(allocSize!=NULL);
+    KASSERT(freeRamFrames!=NULL);
+    KASSERT(nRamFrames>first);
+    freeppages(paddr, freeRamFrames[first].size);	
+  }
+}

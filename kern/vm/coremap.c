@@ -96,6 +96,7 @@ paddr_t getfreeppages(unsigned long npages) {
   if (found<0) //in case I can't find a page -> page replacement
   { 
    //TODO: page replacement, get a "found"
+	panic("NO PAGES!");
   }
 
   addr = (paddr_t) found*PAGE_SIZE;
