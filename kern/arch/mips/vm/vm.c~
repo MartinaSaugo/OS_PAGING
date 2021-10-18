@@ -35,12 +35,12 @@
 #include <spinlock.h>
 #include <proc.h>
 #include <current.h>
-#include <mips/tlb.h>
 #include <addrspace.h>
 #include <vm.h>
 
 #include <pt.h>
 #include <coremap.h>
+#include <vm_tlb.h>
 
 /*
  * Dumb MIPS-only "VM system" that is intended to only be just barely
@@ -97,7 +97,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 {
 	vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop;
 	paddr_t paddr;
-	int i, index;
+	// static int victim = 0;
+	// (void *) victim; // FIX use it
+	int i, index, freeSpace;
 	uint32_t ehi, elo;
 	struct addrspace *as;
 	int spl;
@@ -157,21 +159,49 @@ vm_fault(int faulttype, vaddr_t faultaddress)
     // update TLB
   /* } */
 
-  // search for a pagetable entry
-    // if pagetable entry found in memory, update TLB and return 0 (restart)
-    // if not found, swap in from disk (ASS3.3)
-  // if pagetable entry not found for faultaddress,
-  // create a new pagetable entry in pagetable, and allocate a new physical page
+	/*
+	 * check if faultaddress is a valid address
+	 * 0. not a valid address = segmentation fault
+	 * 1. a valid address: search for a pagetable entry
+	 *		1.1 found (in memory): update TLB and return 0 (restart)
+	 *		1.2 not found because not in memory: swap in from disk
+	 *		1.3 entry not found: (real fault) search space in memory
+	 *			1.3.1 space not found: choose a "random" pagetable entry; swap out corresponding ppage; change address; also TLB
+	 *			1.3.2 space found: create a new pagetable entry and allocate a new physical page
+	 */
 
+  // check if valid address	
   if ((faultaddress >= vbase1 && faultaddress < vtop1) || (faultaddress >= vbase2 && faultaddress < vtop2) || (faultaddress >= stackbase && faultaddress < stacktop)) 
   {
-    // valid address, let's see if it's present in pagetable
+    // 1. valid address, let's see if it's present in pagetable
     index = pagetable_search(as -> pagetable, faultaddress);
-    if(index == -1) // not present as pagetable entry
-      index = pagetable_add(as -> pagetable, faultaddress);
-	  paddr = freeRamFrames[index].paddr;
+    if(index < 0) {
+		// 1.2: swapped out 
+		if(index == -2){
+			// swap in
+			panic("implement swap in\n");
+		}
+		// 1.3: not in memory and not in swap file - search space in coremap 
+		if(index == -1){
+			// check if free space 
+			freeSpace = getfreeppages(1);
+			// 1.3.1 space not found: choose a "random" pagetable entry, swap out ppage; change ptentry address; evict TLB
+			if(freeSpace == 0){
+				// pagetable_swap_out();
+				panic("no more free space - implement swap out\n");
+			}
+			// 1.3.2 space found: create a new pt entry and allocate new ppage
+			else {
+				index = pagetable_add(as -> pagetable, faultaddress);
+				paddr = freeRamFrames[index].paddr;
+			}
+		}
+	}
+	// 1.1 found in memory (do nothing) update TLB and restart... 
   }
-  else {// segmentation fault 
+  
+  // 0. invalid address = segmentation fault
+  else {
 	return EFAULT;
   }
 

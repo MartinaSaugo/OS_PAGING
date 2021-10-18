@@ -197,7 +197,11 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			}
 		}
 	}
-	// 1.1 found in memory (do nothing) update TLB and restart... 
+   // 1.1 found in memory (do nothing) update TLB and restart... 	
+   else
+   {
+	paddr = freeRamFrames[index].paddr;
+   }
   }
   
   // 0. invalid address = segmentation fault
