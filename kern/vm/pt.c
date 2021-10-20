@@ -28,7 +28,7 @@ int pagetable_search(struct pagetable *pt, vaddr_t vaddr) {
   return -1;
 }
 
-/* add an entry to the pagetable, also allocates page in memory (dynamic allocation) */
+/* add an entry to the pagetable, also allocates page in memory (dynamic allocation) - called only when you're sure there's enough space */
 int pagetable_add(struct pagetable *pt, vaddr_t vaddr) {
   paddr_t paddr;
   struct pagetable_entry *p;     
@@ -41,6 +41,20 @@ int pagetable_add(struct pagetable *pt, vaddr_t vaddr) {
   p -> vaddr = vaddr & PAGE_FRAME;  // get starting vaddr of vpage
   p -> ppage_index = index;
   p -> next = pt -> head;
+  p -> status = PRESENT;
   pt -> head = p;
   return index;
 }
+
+/* implement a round-robin-like victim selection algorithm 
+ * (if at the end, start from head) */
+struct pagetable_entry *pagetable_select_victim(struct pagetable *pt){
+	static struct pagetable_entry *next_victim = NULL;
+	if(next_victim == NULL){
+		next_victim = pt -> head;
+	}
+	struct pagetable_entry *victim = next_victim; 
+	next_victim = next_victim -> next;
+	return victim;
+}
+

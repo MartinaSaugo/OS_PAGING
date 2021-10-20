@@ -41,6 +41,7 @@
 #include <pt.h>
 #include <coremap.h>
 #include <vm_tlb.h>
+#include <swapfile.h>
 
 /*
  * Dumb MIPS-only "VM system" that is intended to only be just barely
@@ -99,7 +100,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	paddr_t paddr;
 	// static int victim = 0;
 	// (void *) victim; // FIX use it
-	int i, index, freeSpace;
+	int i, index = 0, freeSpace;
 	uint32_t ehi, elo;
 	struct addrspace *as;
 	int spl;
@@ -187,7 +188,27 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			freeSpace = getfreeppages(1);
 			// 1.3.1 space not found: choose a "random" pagetable entry, swap out ppage; change ptentry address; evict TLB
 			if(freeSpace == 0){
+				/*
+				 * TODO: check if page has been modified; if not evict; if yes
+				 * swap out and evict 
+				 */
+				// we will never refactor this, fuck
+				int result = 0;
+				struct pagetable_entry *victim = pagetable_select_victim(as -> pagetable);
+				index = victim -> ppage_index;
+				coremap_entry_t pentry_victim = freeRamFrames[index];
+				paddr_t paddr_victim = pentry_victim.paddr;
+				result = swap_out(paddr_victim);
+				(void) result;
+				(void) victim;
 				// pagetable_swap_out();
+				// - selezionare una vittima nella pagetable
+				// - prendere la corrispondente entry della coremap
+				// - prendere la corrispondente pagina fisica
+				// - copiarla nello swapfile 
+				// - segnare la ptentry come SWAPPED 
+				// - aggiungere una nuova ptentry e associarla alla stessa coremap entry
+				// - ritornare l'index della coremap 
 				panic("no more free space - implement swap out\n");
 			}
 			// 1.3.2 space found: create a new pt entry and allocate new ppage
@@ -197,13 +218,11 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			}
 		}
 	}
-   // 1.1 found in memory (do nothing) update TLB and restart... 	
-   else
-   {
-	paddr = freeRamFrames[index].paddr;
-   }
+	// 1.1 found in memory (do nothing) update TLB and restart... 
+	else {
+		paddr = freeRamFrames[index].paddr;
+	}
   }
-  
   // 0. invalid address = segmentation fault
   else {
 	return EFAULT;

@@ -30,5 +30,6 @@ typedef struct pagetable {
 pagetable_t* pagetable_init(void);
 int pagetable_search(struct pagetable *, vaddr_t);
 int pagetable_add(struct pagetable *, vaddr_t);
+struct pagetable_entry *pagetable_select_victim(struct pagetable *);
 
 #endif
