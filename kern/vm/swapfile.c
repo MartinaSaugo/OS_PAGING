@@ -21,13 +21,14 @@
 static swap_entry_t swaptable[SWAPSLOTS];
 static struct vnode *swapspace;
 static char swapfile[]="SWAPFILE";
-static struct lock *swaplock=NULL;
-static struct spinlock *swapspin; 
+// static struct lock *swaplock=NULL;
+// static struct spinlock *swapspin; 
 
 void swap_init (void){
 	int i;
 	int res = vfs_open(swapfile, O_RDWR|O_CREAT|O_TRUNC, 0, &swapspace); //0=mode, not supported
 	if(res)
+		// TODO handle in some way...
 		panic("CAN'T OPEN SWAP FILE, ERROR: %d\n", res);
 	
 	//make the swap table empty
@@ -37,9 +38,13 @@ void swap_init (void){
 		swaptable[i].status = FREE;
 		//swaptable[i].va=NULL;	
 	}
-	swaplock=lock_create("swaplock");
-	swapspin=kmalloc(sizeof(struct spinlock*));
-	spinlock_init(swapspin);
+
+	/* 
+		swaplock=lock_create("swaplock");
+		swapspin=kmalloc(sizeof(struct spinlock*));
+		spinlock_init(swapspin);
+	*/
+
 	return;
 }
 
@@ -57,14 +62,14 @@ int write_page(int index, paddr_t page){
 	off_t pos = index * PAGE_SIZE; 
 	
 	int result = 0;
+	(void) result;
 	//MUST FIX! -> significa che ci serve l'indirizzo virtuale? In teoria ce l'abbiamo(?)
-	// we don't need this
-	/* 	page=PADDR_TO_KVADDR(page); */
+	page = PADDR_TO_KVADDR(page); 
 	
 	uio_kinit(&iov, &pageuio, (void *)page, PAGE_SIZE, pos, UIO_WRITE);
-	result = VOP_WRITE(swapspace, &pageuio);
+	result = VOP_WRITE(swapspace, &pageuio); 
 	swaptable[index].status = DIRTY;
-	return result;
+	return 0;
 }
 
 int read_page(int index, paddr_t page){

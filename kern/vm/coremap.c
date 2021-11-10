@@ -17,7 +17,7 @@ coremap_entry_t * coremap_init(void){
   paddr_t paddr;
   vaddr_t vaddr;
   paddr_t ramsize = ram_getsize(); // returns lastpaddr
-  paddr_t kernelsize=ram_getfirstfree(); //returns first available address after initializing kernel+exceptHandler... 
+  paddr_t kernelsize = ram_getfirstfree(); //returns first available address after initializing kernel+exceptHandler... 
   long ramsizepages = ramsize / PAGE_SIZE;  // size of ram in pages
   nRamFrames=ramsizepages;
   long kernelpages;  // kernel size in pages
@@ -110,7 +110,7 @@ paddr_t getppages(unsigned long npages)
 {
   paddr_t addr;
   unsigned int i;
-  if(!isTableActive())
+  if(!isTableActive())	/* kernel only */
   {
     spinlock_acquire(&stealmem_lock);
     addr = ram_stealmem(npages);

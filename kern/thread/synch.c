@@ -166,8 +166,8 @@ lock_create(const char *name)
 	#endif
 	#if OPT_WC
 	lock->lk_wchan=wchan_create(lock->lk_name);
-	if(lock->lk_wchan==NULL)
-	{
+
+	if(lock->lk_wchan==NULL){
 		kfree(lock->lk_name);
 		kfree(lock);
 		return NULL;

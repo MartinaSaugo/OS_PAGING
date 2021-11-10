@@ -10,6 +10,8 @@
 #include <spinlock.h>
 #include <machine/vm.h> // TODO: check if needed
 
+// TODO remove pagetable.h
+
 // PRESENT = in memory
 // SWAPPED = in disk
 typedef enum { PRESENT, SWAPPED } page_status;

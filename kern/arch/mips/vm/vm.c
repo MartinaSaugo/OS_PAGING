@@ -65,7 +65,8 @@
 
 void
 vm_bootstrap(void)
-{ // do nothing
+{ 
+	// do nothing
 }
 
 /*
@@ -108,6 +109,17 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	faultaddress &= PAGE_FRAME;
 
 	DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
+	as = proc_getas();
+	// region = as -> start_region();
+
+	if (curproc == NULL) { //No process. This is probably a kernel fault early in boot. Return EFAULT so as to panic instead of getting into an infinite faulting loop.
+		return EFAULT;
+	}
+
+	if (as == NULL) { //No address space set up. This is probably also a kernel fault early in boot.
+		return EFAULT;
+	}
+
 
 	switch (faulttype) {
 	    case VM_FAULT_READONLY: // We always create pages read-write, so we can't get this 
@@ -118,15 +130,6 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		    break;
 	    default:
 		return EINVAL;
-	}
-
-	if (curproc == NULL) { //No process. This is probably a kernel fault early in boot. Return EFAULT so as to panic instead of getting into an infinite faulting loop.
-		return EFAULT;
-	}
-
-	as = proc_getas();
-	if (as == NULL) { //No address space set up. This is probably also a kernel fault early in boot.
-		return EFAULT;
 	}
 
 	// Assert that the address space has been set up properly. 
@@ -192,7 +195,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 				 * TODO: check if page has been modified; if not evict; if yes
 				 * swap out and evict 
 				 */
-				// we will never refactor this, fuck
+				// we should refactor this
 				int result = 0;
 				struct pagetable_entry *victim = pagetable_select_victim(as -> pagetable);
 				index = victim -> ppage_index;
