@@ -201,6 +201,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 				index = victim -> ppage_index;
 				coremap_entry_t pentry_victim = freeRamFrames[index];
 				paddr_t paddr_victim = pentry_victim.paddr;
+				// TODO: modify pagetable if swap ok
 				result = swap_out(paddr_victim);
 				(void) result;
 				(void) victim;
