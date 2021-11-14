@@ -146,7 +146,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	// KASSERT((as->as_pbase2 & PAGE_FRAME) == as->as_pbase2);
 	// KASSERT((as->as_stackpbase & PAGE_FRAME) == as->as_stackpbase);
 
-  KASSERT(as -> pagetable != NULL);
+  KASSERT(as -> pt != NULL);
 
 	vbase1 = as->as_vbase1;
 	vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
@@ -156,9 +156,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	stacktop = USERSTACK;
 
   // physical page index
-  /* index = pagetable_search(as -> pagetable, faultaddress); */
+  /* index = pt_search(as -> pt, faultaddress); */
   /* if(index == -1){ */
-    /* pagetable_add(as -> pagetable, faultaddress);  */
+    /* pt_add(as -> pt, faultaddress);  */
     // TODO ASS3.3 swap in from disk 
     // update TLB
   /* } */
@@ -166,19 +166,19 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	/*
 	 * check if faultaddress is a valid address
 	 * 0. not a valid address = segmentation fault
-	 * 1. a valid address: search for a pagetable entry
+	 * 1. a valid address: search for a ptentry
 	 *		1.1 found (in memory): update TLB and return 0 (restart)
 	 *		1.2 not found because not in memory: swap in from disk
 	 *		1.3 entry not found: (real fault) search space in memory
-	 *			1.3.1 space not found: choose a "random" pagetable entry; swap out corresponding ppage; change address; also TLB
-	 *			1.3.2 space found: create a new pagetable entry and allocate a new physical page
+	 *			1.3.1 space not found: choose a "random" ptentry; swap out corresponding ppage; change address; also TLB
+	 *			1.3.2 space found: create a new ptentry and allocate a new physical page
 	 */
 
   // check if valid address	
   if ((faultaddress >= vbase1 && faultaddress < vtop1) || (faultaddress >= vbase2 && faultaddress < vtop2) || (faultaddress >= stackbase && faultaddress < stacktop)) 
   {
-    // 1. valid address, let's see if it's present in pagetable
-    index = pagetable_search(as -> pagetable, faultaddress);
+    // 1. valid address, let's see if it's present in pt
+    index = pt_search(as -> pt, faultaddress);
     if(index < 0) {
 		// 1.2: swapped out 
 		if(index == -2){
@@ -189,7 +189,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		if(index == -1){
 			// check if free space 
 			freeSpace = getfreeppages(1);
-			// 1.3.1 space not found: choose a "random" pagetable entry, swap out ppage; change ptentry address; evict TLB
+			// 1.3.1 space not found: choose a "random" ptentry, swap out ppage; change ptentry address; evict TLB
 			if(freeSpace == 0){
 				/*
 				 * TODO: check if page has been modified; if not evict; if yes
@@ -197,16 +197,16 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 				 */
 				// we should refactor this
 				int result = 0;
-				struct pagetable_entry *victim = pagetable_select_victim(as -> pagetable);
+				ptentry_t *victim = pt_select_victim(as -> pt);
 				index = victim -> ppage_index;
 				coremap_entry_t pentry_victim = freeRamFrames[index];
 				paddr_t paddr_victim = pentry_victim.paddr;
-				// TODO: modify pagetable if swap ok
+				// TODO: modify pt if swap ok
 				result = swap_out(paddr_victim);
 				(void) result;
 				(void) victim;
-				// pagetable_swap_out();
-				// - selezionare una vittima nella pagetable
+				// pt_swap_out();
+				// - selezionare una vittima nella pt
 				// - prendere la corrispondente entry della coremap
 				// - prendere la corrispondente pagina fisica
 				// - copiarla nello swapfile 
@@ -217,7 +217,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			}
 			// 1.3.2 space found: create a new pt entry and allocate new ppage
 			else {
-				index = pagetable_add(as -> pagetable, faultaddress);
+				index = pt_add(as -> pt, faultaddress);
 				paddr = freeRamFrames[index].paddr;
 			}
 		}
@@ -270,7 +270,7 @@ as_create(void)
 		return NULL;
 	}
   	
-	as->pagetable=pagetable_init();
+	as->pt = pt_init();
 
 	as->as_vbase1 = 0;
 	as->as_pbase1 = 0;
@@ -376,7 +376,7 @@ as_prepare_load(struct addrspace *as)
   // take only one page per segment, let's see if it works... TODO
 
 	as->as_pbase1 = getppages(1);
-  // pagetable_write(as -> pagetable, as -> as_pbase1);
+  // pt_write(as -> pt, as -> as_pbase1);
 	if (as->as_pbase1 == 0) {
 		return ENOMEM;
 	}

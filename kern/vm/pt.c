@@ -1,21 +1,21 @@
 #include <pt.h>
 
-pagetable_t* pagetable_init(void)
+pt_t* pt_init(void)
 {
-	pagetable_t *res = (pagetable_t*)kmalloc(sizeof(pagetable_t));
-  	if(res == NULL)
+	pt_t *pt = (pt_t *) kmalloc(sizeof(pt_t));
+  	if(pt == NULL)
     		panic("Couldn't allocate pagetable\n");
-  	res -> head = NULL;
-  	res -> tail = NULL;
-  	res -> npages = 0;
-	return res;
+	pt -> head = NULL;
+  	pt -> tail = NULL;
+  	pt -> npages = 0;
+	return pt;
 }
 
 /* given a vaddr, search the pagetable for the corresponding entry.
  * @return -1 if not found, -2 if swapped,  
  * a positive integer if found (the index of the ppage in the coremap). */
-int pagetable_search(struct pagetable *pt, vaddr_t vaddr) {
-  struct pagetable_entry *pe;
+int pt_search(pt_t *pt, vaddr_t vaddr) {
+  ptentry_t *pe;
   if(pt -> head == NULL)  // list is empty
     return -1;
   for(pe = pt -> head; pe != NULL; pe = pe -> next){
@@ -29,15 +29,15 @@ int pagetable_search(struct pagetable *pt, vaddr_t vaddr) {
 }
 
 /* add an entry to the pagetable, also allocates page in memory (dynamic allocation) - called only when you're sure there's enough space */
-int pagetable_add(struct pagetable *pt, vaddr_t vaddr) {
+int pt_add(pt_t *pt, vaddr_t vaddr) {
   paddr_t paddr;
-  struct pagetable_entry *p;     
+  ptentry_t *p;     
   int index = -1;
   paddr = getppages(1);   // get a new page, notice that you don't know where it will be in physical memory
   // TODO checks
   index = paddr / PAGE_SIZE;
   // create a new pte and update its fields 
-  p = kmalloc(sizeof(struct pagetable_entry));
+  p = kmalloc(sizeof(ptentry_t));
   p -> vaddr = vaddr & PAGE_FRAME;  // get starting vaddr of vpage
   p -> ppage_index = index;
   p -> next = pt -> head;
@@ -48,12 +48,12 @@ int pagetable_add(struct pagetable *pt, vaddr_t vaddr) {
 
 /* implement a round-robin-like victim selection algorithm 
  * (if at the end, start from head) */
-struct pagetable_entry *pagetable_select_victim(struct pagetable *pt){
-	static struct pagetable_entry *next_victim = NULL;
+ptentry_t *pt_select_victim(pt_t *pt){
+	static ptentry_t *next_victim = NULL;
 	if(next_victim == NULL){
 		next_victim = pt -> head;
 	}
-	struct pagetable_entry *victim = next_victim; 
+	ptentry_t *victim = next_victim; 
 	next_victim = next_victim -> next;
 	return victim;
 }

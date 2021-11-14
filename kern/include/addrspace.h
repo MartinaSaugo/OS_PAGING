@@ -68,8 +68,7 @@ struct addrspace {
         paddr_t as_pbase2;
         size_t as_npages2;
         paddr_t as_stackpbase;
-        struct pagetable *pagetable; 
-        // TODO: add pagetable
+        pt_t *pt; 
 #endif
 };
 

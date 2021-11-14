@@ -8,30 +8,28 @@
 #include <coremap.h>
 #include <current.h>
 #include <spinlock.h>
-#include <machine/vm.h> // TODO: check if needed
-
-// TODO remove pagetable.h
+#include <machine/vm.h> // TODO: check if it's needed
 
 // PRESENT = in memory
 // SWAPPED = in disk
 typedef enum { PRESENT, SWAPPED } page_status;
 
-typedef struct pagetable_entry {
-  vaddr_t vaddr;                  // starting virtual address of the page 
-  int ppage_index;                // maps a virtual page to a physical page (-> coremap)
-  struct pagetable_entry *next;   // implement as linked list
-  page_status status;			  // current status (PRESENT / SWAPPED)
-} pagetable_entry_t; 
+typedef struct ptentry {
+  vaddr_t vaddr;					// starting virtual address of the page 
+  int ppage_index;                	// maps a virtual page to a physical page (-> coremap)
+  struct ptentry *next;				// implement as linked list
+  page_status status;			  	// current status (PRESENT / SWAPPED)
+} ptentry_t; 
 
-typedef struct pagetable {
-  struct pagetable_entry *head;
-  struct pagetable_entry *tail;
+typedef struct pt {
+  ptentry_t *head;					// TODO use sentinel node
+  ptentry_t *tail;					// TODO use sentinel node
   int npages;
-} pagetable_t;
+} pt_t;
 
-pagetable_t* pagetable_init(void);
-int pagetable_search(struct pagetable *, vaddr_t);
-int pagetable_add(struct pagetable *, vaddr_t);
-struct pagetable_entry *pagetable_select_victim(struct pagetable *);
+pt_t* pt_init(void);
+int pt_search(pt_t *, vaddr_t);
+int pt_add(pt_t *, vaddr_t);
+ptentry_t *pt_select_victim(pt_t *);
 
 #endif
