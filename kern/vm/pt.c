@@ -43,6 +43,7 @@ int pt_add(pt_t *pt, vaddr_t vaddr) {
     index = paddr / PAGE_SIZE;
     /* create the new entry */
     new = (ptentry_t *) kmalloc(sizeof(ptentry_t));
+    new -> index = index;
     new -> vaddr = vaddr & PAGE_FRAME;
     new -> status = PRESENT;
     /* attach the node to the rest of the list */
