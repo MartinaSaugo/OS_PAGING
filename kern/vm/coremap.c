@@ -35,17 +35,19 @@ coremap_entry_t * coremap_init(void){
   //paddr = ram_getmem(kernelpages, pages);
   if(kernelpages+pages>ramsizepages)
      panic("Too little memory for the bare minumin\n");
-  paddr=PAGE_SIZE*(kernelpages);
+
+  paddr = PAGE_SIZE*(kernelpages);
 
   if(paddr == 0) 
     return NULL;
   vaddr = PADDR_TO_KVADDR(paddr);
   KASSERT(vaddr % PAGE_SIZE == 0);
   coremap=(coremap_entry_t*)vaddr;
-	
+
   for (i=0; i<kernelpages; i++) { //alloc kernel   
     coremap[i].status = FIXED;
-    coremap[i].paddr = 0;
+    // TODO: approccio molto ignorante
+    coremap[i].paddr = i * PAGE_SIZE; 
     coremap[i].size = kernelpages; 
   }  
   for (; i<kernelpages+pages; i++) {  //alloc coremap
@@ -70,7 +72,7 @@ coremap_entry_t * coremap_init(void){
 paddr_t getfreeppages(unsigned long npages) {
   paddr_t addr;	
   long i, first, found, np = (long)npages;
-
+     
   if (!isTableActive()) 
 	  return 0; 
 
@@ -90,12 +92,51 @@ paddr_t getfreeppages(unsigned long npages) {
   // no more free space (we return 0 as special value since first pages
   // are occupied by kernel (FIXED) and kernel doesn't use coremap...)
   if (found < 0) 
-	  return 0x0;
+        // TODO modify here
+        return 0;
 
   addr = (paddr_t) found * PAGE_SIZE;
 
   spinlock_release(&freemem_lock);
   return addr;
+}
+
+/* returns 0 if the page is found, -1 if not found */
+/* the paddr of the page is put into result */
+int getfreeppage(paddr_t *paddr){
+    paddr_t addr;  
+    long i, first, found;
+
+    if(!isTableActive())
+        return -1;
+
+    spinlock_acquire(&freemem_lock);
+
+    first = -1;
+    found = -1;
+
+    for(i=0; i < nRamFrames; i++){
+        /* if a free/clean frame is found */
+        if(freeRamFrames[i].status == FREE || freeRamFrames[i].status == CLEAN){
+            if(i==0 || (freeRamFrames[i-1].status != FREE && freeRamFrames[i-1].status != CLEAN))
+                first = i;
+            if(i-first+1 >= 1){
+                found = first;
+                break;
+            }
+        }
+    }
+
+    if(found < 0)
+        return -1;
+    addr = (paddr_t) found * PAGE_SIZE;
+
+    /* return the address */
+    *paddr = addr;  
+
+    spinlock_release(&freemem_lock);
+    return 0;
+
 }
 
 int isTableActive () {

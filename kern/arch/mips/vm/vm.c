@@ -94,6 +94,17 @@ vm_tlbshootdown(const struct tlbshootdown *ts)
     panic("dumbvm tried to do tlb shootdown?!\n");
 }
 
+void tlb_invalidate_entry(vaddr_t remove_vaddr) {
+	//uint32_t ehi, elo;	
+	int spl = splhigh();
+	int index = -1;
+	index = tlb_probe(remove_vaddr, 0);
+	if (index >= 0) {
+		tlb_write(TLBHI_INVALID(index), TLBLO_INVALID(), index);
+	}
+        splx(spl);	
+}
+
 int
 vm_fault(int faulttype, vaddr_t faultaddress)
 {
@@ -101,10 +112,12 @@ vm_fault(int faulttype, vaddr_t faultaddress)
     paddr_t paddr;
     // static int victim = 0;
     // (void *) victim; // FIX use it
-    int i, index = 0, freeSpace;
+    int i, index = 0, result;
     uint32_t ehi, elo;
     struct addrspace *as;
     int spl;
+
+    paddr_t freeppage;
 
     faultaddress &= PAGE_FRAME;
 
@@ -122,11 +135,14 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 
     switch (faulttype) {
+        /* READONLY = 2 */
         case VM_FAULT_READONLY: // We always create pages read-write, so we can't get this 
           panic("dumbvm: got VM_FAULT_READONLY\n");
-        case VM_FAULT_READ:
-            break;
+        /* WRITE = 1 */ 
         case VM_FAULT_WRITE:
+            break;
+        /* READ = 0 */ 
+        case VM_FAULT_READ:
             break;
         default:
         return EINVAL;
@@ -155,14 +171,6 @@ vm_fault(int faulttype, vaddr_t faultaddress)
     stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
     stacktop = USERSTACK;
 
-  // physical page index
-  /* index = pt_search(as -> pt, faultaddress); */
-  /* if(index == -1){ */
-    /* pt_add(as -> pt, faultaddress);  */
-    // TODO ASS3.3 swap in from disk 
-    // update TLB
-  /* } */
-
     /*
      * check if faultaddress is a valid address
      * 0. not a valid address = segmentation fault
@@ -188,23 +196,26 @@ vm_fault(int faulttype, vaddr_t faultaddress)
         // 1.3: not in memory and not in swap file - search space in coremap 
         if(index == -1){
             // check if free space 
-            freeSpace = getfreeppages(1);
+            result = getfreeppage(&freeppage);
             // 1.3.1 space not found: choose a "random" ptentry, swap out ppage; change ptentry address; evict TLB
-            if(freeSpace == 0){
+            if(result != 0){
                 /*
                  * TODO: check if page has been modified; if not evict; if yes
                  * swap out and evict 
                  */
-                // we should refactor this
-                int result = 0;
+                // we should refactor this, now we have variables for each step just for debugging purposes
+                result = 0;
                 ptentry_t *victim = pt_select_victim(as -> pt);
                 index = victim -> ppage_index;
                 coremap_entry_t pentry_victim = freeRamFrames[index];
                 paddr_t paddr_victim = pentry_victim.paddr;
                 // TODO: modify pt if swap ok
                 result = swap_out(paddr_victim);
+                tlb_invalidate_entry(faultaddress);
                 (void) result;
                 (void) victim;
+
+                /* panic("no more free space - implement swap out\n"); */
                 // pt_swap_out();
                 // - selezionare una vittima nella pt
                 // - prendere la corrispondente entry della coremap
@@ -213,7 +224,6 @@ vm_fault(int faulttype, vaddr_t faultaddress)
                 // - segnare la ptentry come SWAPPED 
                 // - aggiungere una nuova ptentry e associarla alla stessa coremap entry
                 // - ritornare l'index della coremap 
-                panic("no more free space - implement swap out\n");
             }
             // 1.3.2 space found: create a new pt entry and allocate new ppage
             else {
@@ -229,9 +239,17 @@ vm_fault(int faulttype, vaddr_t faultaddress)
   }
   // 0. invalid address = segmentation fault
   else {
-    return EFAULT;
+        kprintf("EFAULT!\n");
+        return EFAULT;
   }
 
+  if(faulttype == VM_FAULT_READONLY)
+    kprintf("(O) index: %d, paddr: %x\n", index, paddr);
+  if(faulttype == VM_FAULT_WRITE)
+    kprintf("(W) index: %d, paddr: %x\n", index, paddr);
+  if(faulttype == VM_FAULT_READ)
+    kprintf("(R) index: %d, paddr: %x\n", index, paddr);
+    
     /* make sure it's page-aligned */
     KASSERT((paddr & PAGE_FRAME) == paddr);
 

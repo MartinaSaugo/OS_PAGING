@@ -16,6 +16,7 @@ int nRamFrames;
 
 coremap_entry_t * coremap_init(void);
 paddr_t getfreeppages(unsigned long npages);
+int getfreeppage(paddr_t *paddr);
 int isTableActive (void);
 paddr_t getppages(unsigned long npages);
 int freeppages(paddr_t addr, unsigned long npages);
