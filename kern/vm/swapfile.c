@@ -69,6 +69,7 @@ int write_page(int index, paddr_t page){
 	uio_kinit(&iov, &pageuio, (void *)page, PAGE_SIZE, pos, UIO_WRITE);
 	result = VOP_WRITE(swapspace, &pageuio); 
 	swaptable[index].status = DIRTY;
+    // TODO if swap file is full return an error and free a swaptable page (or panic)
 	return 0;
 }
 

@@ -385,53 +385,25 @@ as_zero_region(paddr_t paddr, unsigned npages)
 int
 as_prepare_load(struct addrspace *as)
 {
-  /* 
-    KASSERT(as->as_pbase1 == 0);
-    KASSERT(as->as_pbase2 == 0);
-    KASSERT(as->as_stackpbase == 0);
-
-    dumbvm_can_sleep();
-  // take only one page per segment, let's see if it works... TODO
-
-    as->as_pbase1 = getppages(1);
-  // pt_write(as -> pt, as -> as_pbase1);
-    if (as->as_pbase1 == 0) {
-        return ENOMEM;
-    }
-
-    as->as_pbase2 = getppages(1);
-    if (as->as_pbase2 == 0) {
-        return ENOMEM;
-    }
-
-    as->as_stackpbase = getppages(1);
-    if (as->as_stackpbase == 0) {
-        return ENOMEM;
-    }
-
-    as_zero_region(as->as_pbase1, as->as_npages1);
-    as_zero_region(as->as_pbase2, as->as_npages2);
-    as_zero_region(as->as_stackpbase, DUMBVM_STACKPAGES);
-  */
-  (void)as;
-    return 0;
+	(void)as;
+	return 0;
 }
 
 int
 as_complete_load(struct addrspace *as)
 {
-    dumbvm_can_sleep();
-    (void)as;
-    return 0;
+	dumbvm_can_sleep();
+	(void)as;
+	return 0;
 }
 
 int
 as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 {
-    (void)as;
-//KASSERT(as->as_stackpbase != 0);
-    *stackptr = USERSTACK;
-    return 0;
+	(void)as;
+	//KASSERT(as->as_stackpbase != 0);
+	*stackptr = USERSTACK;
+	return 0;
 }
 
 int

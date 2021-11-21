@@ -56,4 +56,6 @@ void free_kpages(vaddr_t addr);
 /* TLB shootdown handling called from interprocessor_interrupt */
 void vm_tlbshootdown(const struct tlbshootdown *);
 
+void tlb_invalidate_entry(vaddr_t remove_vaddr);
+
 #endif /* _VM_H_ */

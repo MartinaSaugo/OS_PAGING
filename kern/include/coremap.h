@@ -19,6 +19,7 @@ paddr_t getfreeppages(unsigned long npages);
 int getfreeppage(paddr_t *paddr);
 int isTableActive (void);
 paddr_t getppages(unsigned long npages);
+int getppage(paddr_t *);
 int freeppages(paddr_t addr, unsigned long npages);
 vaddr_t alloc_kpages(unsigned npages);
 void free_kpages(vaddr_t addr);

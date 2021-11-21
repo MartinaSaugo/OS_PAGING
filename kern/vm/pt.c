@@ -1,4 +1,6 @@
 #include <pt.h>
+/* add this to check nRamFrames */
+#include <coremap.h> 
 
 pt_t* pt_init(void)
 {
@@ -36,16 +38,17 @@ int pt_search(pt_t *pt, vaddr_t vaddr) {
 int pt_add(pt_t *pt, vaddr_t vaddr) {
     paddr_t paddr;
     ptentry_t *new;
-    int index = -1;
+    int index = -1, result;
     // get a new page, notice that you don't know where it will be in physical memory
-    paddr = getppages(1);   
-    // TODO checks
+	result = getppage(&paddr);
+	KASSERT(result == 0);
+    // TODO checks: the paddr may be invalid
     index = paddr / PAGE_SIZE;
     /* create the new entry */
     new = (ptentry_t *) kmalloc(sizeof(ptentry_t));
-    new -> index = index;
     new -> vaddr = vaddr & PAGE_FRAME;
     new -> status = PRESENT;
+    new -> ppage_index = index;
     /* attach the node to the rest of the list */
     new -> next = pt -> nil -> next;
     /* put new entry as first element of the list */
