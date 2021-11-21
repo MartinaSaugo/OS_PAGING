@@ -109,6 +109,7 @@ int
 vm_fault(int faulttype, vaddr_t faultaddress)
 {
 	vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop;
+	vaddr_t faultpage;
 	paddr_t paddr;
 	// static int victim = 0;
 	// (void *) victim; // FIX use it
@@ -119,9 +120,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	paddr_t freeppage;
 
-	faultaddress &= PAGE_FRAME;
+	faultpage = faultaddress & PAGE_FRAME;
 
-	DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
+	DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultpage);
 	as = proc_getas();
 	// region = as -> start_region();
 
@@ -183,9 +184,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	 */
 
 	// check if valid address	
-  	if ((faultaddress >= vbase1 && faultaddress < vtop1) || (faultaddress >= vbase2 && faultaddress < vtop2) || (faultaddress >= stackbase && faultaddress < stacktop)) {
+  	if ((faultpage >= vbase1 && faultpage < vtop1) || (faultpage >= vbase2 && faultpage < vtop2) || (faultpage >= stackbase && faultpage < stacktop)) {
 	// 1. valid address, let's see if it's present in pt
-	index = pt_search(as -> pt, faultaddress);
+	index = pt_search(as -> pt, faultpage);
 	if(index < 0) {
 		// 1.2: swapped out 
 		if(index == -2){
@@ -209,7 +210,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 				paddr_t paddr_victim = pentry_victim.paddr;
 				// TODO: modify pt if swap ok
 				result = swap_out(paddr_victim);
-				tlb_invalidate_entry(faultaddress);
+				tlb_invalidate_entry(faultpage);
 				(void) result;
 				(void) victim;
 				/* panic("no more free space - implement swap out\n"); */
@@ -224,7 +225,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			}
 			// 1.3.2 space found: create a new pt entry and allocate new ppage
 			else {
-				index = pt_add(as -> pt, faultaddress);
+				index = pt_add(as -> pt, faultpage);
 				paddr = freeRamFrames[index].paddr;
 			}
 		}
@@ -234,7 +235,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			paddr = freeRamFrames[index].paddr;
 		}
 	}
-  // 0. invalid address = segmentation fault
+	// 0. invalid address = segmentation fault
 	else {
 		kprintf("EFAULT!\n");
 		return EFAULT;
@@ -258,9 +259,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		if (elo & TLBLO_VALID) {
 			continue;
 		}
-		ehi = faultaddress;
+		ehi = faultpage;
 		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
-		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
+		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultpage, paddr);
 		tlb_write(ehi, elo, i);
 		splx(spl);
 		return 0;
@@ -268,9 +269,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	//kprintf("dumbvm: Ran out of TLB entries - cannot handle page fault\n"); //no more!
 	//wmd
 	i = tlb_get_rr_victim();
-		ehi = faultaddress;
+		ehi = faultpage;
 	elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
-	DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
+	DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultpage, paddr);
 	tlb_write(ehi, elo, i); 
 	splx(spl);
 	return 0;
