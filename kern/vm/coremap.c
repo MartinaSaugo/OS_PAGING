@@ -7,9 +7,9 @@
 #include <current.h>
 #include <spinlock.h>
 
-int allocTableActive=0;
-struct spinlock stealmem_lock= SPINLOCK_INITIALIZER;
-struct spinlock freemem_lock= SPINLOCK_INITIALIZER;
+int allocTableActive = 0;
+struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
+struct spinlock freemem_lock = SPINLOCK_INITIALIZER;
 
 int isTableActive () {
 	int active;

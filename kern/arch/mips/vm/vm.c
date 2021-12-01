@@ -210,9 +210,17 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 				paddr_t paddr_victim = pentry_victim.paddr;
 				// TODO: modify pt if swap ok
 				result = swap_out(paddr_victim);
+				KASSERT(result == 0);
+				/* if swap is ok */
+				freeRamFrames[index].status = FREE; // ppage has been swapped out
+				victim -> status = SWAPPED;
 				tlb_invalidate_entry(faultpage);
-				(void) result;
-				(void) victim;
+				/* now that we have freed space, we create a new page */
+				result = getfreeppage(&freeppage);
+				KASSERT(result == 0); // verify that we have freed physical space
+				/* add a new entry associated to that space */
+				index = pt_add(as -> pt, faultpage);
+				paddr = freeRamFrames[index].paddr;
 				/* panic("no more free space - implement swap out\n"); */
 				// pt_swap_out();
 				// - selezionare una vittima nella pt
