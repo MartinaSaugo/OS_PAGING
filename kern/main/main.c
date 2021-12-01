@@ -214,6 +214,8 @@ sys_reboot(int code)
 void
 kmain(char *arguments)
 {
+	// TODO move from here
+	allocTableActive = 0;
     boot();
         
     freeRamFrames = coremap_init();
