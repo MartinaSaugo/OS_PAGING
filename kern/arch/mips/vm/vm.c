@@ -129,7 +129,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	struct addrspace *as;
 	int spl;
 
-	paddr_t freeppage;
+	// paddr_t freeppage;
 
 	faultpage = faultaddress & PAGE_FRAME;
 
@@ -187,71 +187,29 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	 * check if faultaddress is a valid address
 	 * 0. not a valid address = segmentation fault
 	 * 1. a valid address: search for a ptentry
-	 *		1.1 found (in memory): update TLB and return 0 (restart)
+	 *		1.1 entry not found: (real fault) find space in memory (coremap)
 	 *		1.2 not found because not in memory: swap in from disk
-	 *		1.3 entry not found: (real fault) search space in memory
-	 *			1.3.1 space not found: choose a "random" ptentry; swap out corresponding ppage; change address; also TLB
-	 *			1.3.2 space found: create a new ptentry and allocate a new physical page
+	 *		1.3 found (in memory): update TLB and return 0 (restart)
 	 */
-
-	// check if valid address	
-  	if ((faultpage >= vbase1 && faultpage < vtop1) || (faultpage >= vbase2 && faultpage < vtop2) || (faultpage >= stackbase && faultpage < stacktop)) {
+	if ((faultpage >= vbase1 && faultpage < vtop1) || (faultpage >= vbase2 && faultpage < vtop2) || (faultpage >= stackbase && faultpage < stacktop)) {
 	// 1. valid address, let's see if it's present in pt
-	index = pt_search(as -> pt, faultpage);
-	if(index < 0) {
-		// 1.2: swapped out 
-		if(index == -2){
-			// swap in
+		ptentry_t *pte = pt_search(as -> pt, faultpage);
+		// 1.1 not in memory and not SWAPPED - search space in coremap and allocate
+		if(pte == NULL){
+			paddr = getppages(1);
+			KASSERT(paddr != 0);
+			// add new pagetable entry
+			result = pt_add(as -> pt, paddr, faultaddress);
+			KASSERT(result != -1);
+		}
+		// 1.2 not in memory because it has been swapped - implement swap in
+		else if(pte -> status == SWAPPED){
+			// TODO implement swap in 
 			panic("implement swap in\n");
 		}
-		// 1.3: not in memory and not in swap file - search space in coremap 
-		if(index == -1){
-			// check if free space 
-			result = getfreeppage(&freeppage);
-			// 1.3.1 space not found: choose a "random" ptentry, swap out ppage; change ptentry address; evict TLB
-			if(result != 0){
-				/*
-				 * TODO: check if page has been modified; if not evict; if yes
-				 * swap out and evict 
-				 */
-				// TODO we should refactor this, now we have variables for each step just for debugging purposes
-				ptentry_t *victim = pt_select_victim(as -> pt);
-				index = victim -> ppage_index;
-				coremap_entry_t pentry_victim = freeRamFrames[index];
-				paddr_t paddr_victim = pentry_victim.paddr;
-				// TODO: modify pt if swap ok
-				result = swap_out(paddr_victim);
-				KASSERT(result == 0);
-				/* if swap is ok */
-				freeRamFrames[index].status = FREE; // ppage has been swapped out
-				victim -> status = SWAPPED;
-				tlb_invalidate_entry(faultpage);
-				/* now that we have freed space, we create a new page */
-				result = getfreeppage(&freeppage);
-				KASSERT(result == 0); // verify that we have freed physical space
-				/* add a new entry associated to that space */
-				index = pt_add(as -> pt, faultpage);
-				paddr = freeRamFrames[index].paddr;
-				/* panic("no more free space - implement swap out\n"); */
-				// pt_swap_out();
-				// - selezionare una vittima nella pt
-				// - prendere la corrispondente entry della coremap
-				// - prendere la corrispondente pagina fisica
-				// - copiarla nello swapfile 
-				// - segnare la ptentry come SWAPPED 
-				// - aggiungere una nuova ptentry e associarla alla stessa coremap entry
-				// - ritornare l'index della coremap 
-			}
-			// 1.3.2 space found: create a new pt entry and allocate new ppage
-			else {
-				index = pt_add(as -> pt, faultpage);
-				paddr = freeRamFrames[index].paddr;
-			}
-		}
-	}
-	// 1.1 found in memory (do nothing) update TLB and restart... 
+		// 1.3 found in memory => update TLB and return 0 (i.e. restart)
 		else {
-			paddr = freeRamFrames[index].paddr;
+			paddr = pte -> ppage_index * PAGE_SIZE;
 		}
 	}
 	// 0. invalid address = segmentation fault
@@ -557,8 +515,65 @@ int getppage(paddr_t *retpaddr){
 
 paddr_t getppages(unsigned long npages)
 {
+	struct addrspace *as;
 	paddr_t paddr;
   	unsigned int i;
+	int result, victim_index;
+
+	// TODO synchronize operations on coremap
+	// TODO check if page has been modified, if not evict, if yes swap out and evict
+	// kernel only
+  	if(!isTableActive()){
+		spinlock_acquire(&stealmem_lock);
+  	  	paddr = ram_stealmem(npages);
+  	  	spinlock_release(&stealmem_lock);
+  	  	return paddr;
+  	}
+  	// try freed pages first 
+  	// TODO modify here! (remove getfreeppages)
+  	paddr = getfreeppages(npages);
+	// no more free space, SWAP OUT
+  	if (paddr == 0){
+		// panic("No more free pages, you should rely on swap.\n");
+		as = proc_getas();
+		// select n consecutive victims
+		victim_index = coremap_victim_selection(npages);
+		// there should always be enough space
+		KASSERT(victim_index >= 0);
+		coremap_entry_t victim = freeRamFrames[victim_index];
+		vaddr_t victim_vaddr = victim.vaddr;
+		ptentry_t *ptvictim = pt_search(as -> pt, victim_vaddr);
+		KASSERT(ptvictim != NULL);
+		// check that the ptentry has the same pindex as the victim
+		KASSERT(ptvictim -> ppage_index == victim_index);
+		KASSERT(ptvictim -> vaddr = victim.vaddr);
+		// swap out victim -- i.e. write page to disk
+		result = swap_out(victim.paddr);
+		KASSERT(result == 0);
+		freeRamFrames[victim_index].status = FREE;
+		ptvictim -> status = SWAPPED;
+		tlb_invalidate_entry(ptvictim -> vaddr);
+		paddr = getfreeppages(npages);
+		// now we should have enough space
+		KASSERT(paddr != 0);
+  	}
+  	spinlock_acquire(&freemem_lock);
+  	freeRamFrames[paddr/PAGE_SIZE].size = npages;
+  	freeRamFrames[paddr/PAGE_SIZE].paddr = paddr;
+	// TODO: consider setting status to FIXED for pagetable entry?
+  	for (i=0; i<npages; i++)
+		freeRamFrames[(paddr/PAGE_SIZE)+i].status=DIRTY;
+  	spinlock_release(&freemem_lock);
+  	return paddr;
+}
+
+/*
+paddr_t getppages(unsigned long npages)
+{
+	struct addrspace *as;
+	paddr_t paddr;
+  	unsigned int i;
+	int result;
 
 	// kernel only
   	if(!isTableActive()){
@@ -567,14 +582,28 @@ paddr_t getppages(unsigned long npages)
   	  	spinlock_release(&stealmem_lock);
   	  	return paddr;
   	}
-
   	// try freed pages first 
-  	/* TODO modify here! */
+  	// TODO modify here! (remove getfreeppages)
   	paddr = getfreeppages(npages);
   	if (paddr == 0){
 		// at this point getfreeppages should never return a 0 value
-		panic("No more free pages, you should rely on swap.\n");
-		// ptentry_t *victim = pt_select_victim(as -> pt);
+		// panic("No more free pages, you should rely on swap.\n");
+		as = proc_getas();
+		for(i = 0; i < npages; i++){
+			ptentry_t *victim = pt_select_victim(as -> pt);
+			int index = victim -> ppage_index;
+			coremap_entry_t pvictim = freeRamFrames[index];
+			paddr_t paddr_victim = pvictim.paddr;
+			result = swap_out(paddr_victim);
+			KASSERT(result == 0);
+			// swap ok
+			freeRamFrames[index].status = FREE;
+			victim -> status = SWAPPED;
+			tlb_invalidate_entry(victim -> vaddr);
+			// result = getfreeppage(&freeppage);
+			KASSERT(result == 0);
+		}
+		paddr = getfreeppages(npages);
   	}
   	spinlock_acquire(&freemem_lock);
   	freeRamFrames[paddr/PAGE_SIZE].size = npages;
@@ -584,6 +613,7 @@ paddr_t getppages(unsigned long npages)
   	spinlock_release(&freemem_lock);
   	return paddr;
 }
+*/
 
 int freeppages(paddr_t addr, unsigned long npages){
 	long i, first, np=(long)npages;	

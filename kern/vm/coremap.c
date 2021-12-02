@@ -52,6 +52,8 @@ coremap_entry_t * coremap_init(void){
 		coremap[i].size = pages; 
   	}
 
+	firstFreeFrame = i;
+
   	for (; i<ramsizepages; i++) { //alloc make everything empty   
 		coremap[i].status = CLEAN;
   	  	coremap[i].paddr = -1;
@@ -63,4 +65,35 @@ coremap_entry_t * coremap_init(void){
   	//spinlock_release(&freemem_lock);
 
   	return coremap;
+}
+
+// select n consecutive victims 
+// (in most cases nvictims should be equal to 1)
+int coremap_victim_selection(int nvictims){
+	static int next_victim = 0;
+	int victim, found = 0, i, iteration = 0;
+	// if at the end, restart from the first non-FIXED page
+	if(next_victim >= nRamFrames)
+		next_victim = firstFreeFrame;
+	victim = next_victim;
+	while(!found){
+		found = 1;
+		// check if there's an interval of consecutive victims
+		for(i=0; i < nvictims; i++)
+			// this should never happen, this function should always return, but 
+			// for the sake of safety let's make this additional check...
+			if(freeRamFrames[victim + i].status == FIXED){
+				found = 0;
+				victim++;
+				if(victim >= nRamFrames){
+					victim = firstFreeFrame;
+					iteration ++;
+					// if second iteration then space not found
+					if(iteration >= 2)
+						return -1;
+				}
+			}
+	}
+	next_victim += nvictims;
+	return victim;
 }

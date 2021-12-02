@@ -27,8 +27,8 @@ typedef struct pt {
 } pt_t;
 
 pt_t* pt_init(void);
-int pt_search(pt_t *, vaddr_t);
-int pt_add(pt_t *, vaddr_t);
+ptentry_t *pt_search(pt_t *, vaddr_t);
+int pt_add(pt_t *, paddr_t, vaddr_t);
 ptentry_t *pt_select_victim(pt_t *);
 
 #endif
