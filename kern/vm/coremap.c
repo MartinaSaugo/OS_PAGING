@@ -40,13 +40,12 @@ coremap_entry_t * coremap_init(void){
   	KASSERT(vaddr % PAGE_SIZE == 0);
   	coremap=(coremap_entry_t*)vaddr;
 
-  	for (i=0; i<kernelpages; i++) { //alloc kernel   
+  	for (i=0; i<kernelpages; i++) {			// alloc kernel   
 		coremap[i].status = FIXED;
-  	  	// TODO: approccio molto ignorante
   	  	coremap[i].paddr = i * PAGE_SIZE; 
   	  	coremap[i].size = kernelpages; 
   	}  
-  	for (; i<kernelpages+pages; i++) {  //alloc coremap
+  	for (; i<kernelpages+pages; i++) {		// alloc coremap
 		coremap[i].status = FIXED;
 		coremap[i].paddr = paddr;
 		coremap[i].size = pages; 
@@ -54,7 +53,7 @@ coremap_entry_t * coremap_init(void){
 
 	firstFreeFrame = i;
 
-  	for (; i<ramsizepages; i++) { //alloc make everything empty   
+  	for (; i<ramsizepages; i++) {			// alloc make everything CLEAN 
 		coremap[i].status = CLEAN;
   	  	coremap[i].paddr = -1;
   	  	coremap[i].size = 0; 
@@ -67,32 +66,38 @@ coremap_entry_t * coremap_init(void){
   	return coremap;
 }
 
-// select n consecutive victims 
+// select n consecutive victims (to swap out)
 // (in most cases nvictims should be equal to 1)
+// @return the first victim of the interval (index in the coremap)
 int coremap_victim_selection(int nvictims){
 	static int next_victim = 0;
 	int victim, found = 0, i, iteration = 0;
+	// if at the beginning, avoid the FIXED section 
+	if(next_victim == 0)
+		next_victim = firstFreeFrame;
 	// if at the end, restart from the first non-FIXED page
 	if(next_victim >= nRamFrames)
 		next_victim = firstFreeFrame;
 	victim = next_victim;
+	// TODO spinlock_acquire?
 	while(!found){
 		found = 1;
 		// check if there's an interval of consecutive victims
-		for(i=0; i < nvictims; i++)
-			// this should never happen, this function should always return, but 
-			// for the sake of safety let's make this additional check...
+		for(i = 0; found && victim + i < nRamFrames && i < nvictims; i++){
+			// a FIXED page cannot be a victim
 			if(freeRamFrames[victim + i].status == FIXED){
 				found = 0;
-				victim++;
-				if(victim >= nRamFrames){
+				victim += i + 1; // jump directly to the frame after FIXED
+				if(victim >= nRamFrames){ 
+					// restart from the beginning
 					victim = firstFreeFrame;
-					iteration ++;
+					iteration++;
 					// if second iteration then space not found
 					if(iteration >= 2)
-						return -1;
+						panic("no more victims in the coremap\n");
 				}
 			}
+		}
 	}
 	next_victim += nvictims;
 	return victim;

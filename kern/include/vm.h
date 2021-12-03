@@ -49,11 +49,9 @@ void vm_bootstrap(void);
 /* Fault handling function called by trap code */
 int vm_fault(int faulttype, vaddr_t faultaddress);
 
+paddr_t getuserppage(void);
 paddr_t getfreeppages(unsigned long npages);
-int getfreeppage(paddr_t *paddr);
-// int isTableActive (void);
 paddr_t getppages(unsigned long npages);
-int getppage(paddr_t *);
 int freeppages(paddr_t addr, unsigned long npages);
 
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
