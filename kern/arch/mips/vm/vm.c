@@ -253,24 +253,24 @@ paddr_t getuserppage(){
 	if(!isTableActive())
 		panic("getuserppage called while table not active\n");
 	for(i = firstFreeFrame; i < nRamFrames; i++){
-		if(freeRamFrames[i].status == CLEAN || freeRamFrames[i].status == FREE){
-			freeRamFrames[i].status = DIRTY;
+		if(coremap[i].status == CLEAN || coremap[i].status == FREE){
+			coremap[i].status = DIRTY;
 			return (paddr_t) (i * PAGE_SIZE);
 		}
 	}
 	as = proc_getas();
 	// no more space, swap out
 	victim = coremap_victim_selection(1);
-	vaddr_t vvaddr = freeRamFrames[victim].vaddr;
+	vaddr_t vvaddr = coremap[victim].vaddr;
 	ptentry_t *ptvictim = pt_search(as -> pt, vvaddr);
 	KASSERT(ptvictim != NULL);
 	KASSERT(ptvictim -> ppage_index == victim);
 	KASSERT(ptvictim -> vaddr == vvaddr);
-	result = swap_out(freeRamFrames[victim].paddr);
+	result = swap_out(coremap[victim].paddr);
 	KASSERT(result == 0);
 	ptvictim -> status = SWAPPED;
 	tlb_invalidate_entry(ptvictim -> vaddr);
-	freeRamFrames[victim].status = DIRTY;
+	coremap[victim].status = DIRTY;
 	return (paddr_t) (victim * PAGE_SIZE);
 }
 
@@ -287,8 +287,8 @@ paddr_t getfreeppages(unsigned long npages) {
 	found = -1; 
 
 	for (i = firstFreeFrame; i < nRamFrames; i++) {
-		if (freeRamFrames[i].status == FREE || freeRamFrames[i].status == CLEAN){
-			if (freeRamFrames[i-1].status != FREE && freeRamFrames[i-1].status != CLEAN)
+		if (coremap[i].status == FREE || coremap[i].status == CLEAN){
+			if (coremap[i-1].status != FREE && coremap[i-1].status != CLEAN)
 				first = i; // set first free in an interval 
 			if (i-first+1 >= np) {
 				found = first;
@@ -333,14 +333,14 @@ paddr_t getppages(unsigned long npages) {
 		victim = coremap_victim_selection(npages);
 		// swap out victims 
 		for(i=0; i < npages; i++){
-			vaddr_t vvaddr = freeRamFrames[victim].vaddr;	// vvaddr == victim's vaddr
+			vaddr_t vvaddr = coremap[victim].vaddr;	// vvaddr == victim's vaddr
 			ptentry_t *ptvictim = pt_search(as -> pt, vvaddr);
 			KASSERT(ptvictim != NULL);
 			KASSERT(ptvictim -> ppage_index == victim);
 			KASSERT(ptvictim -> vaddr == vvaddr);
-			result = swap_out(freeRamFrames[victim].paddr);
+			result = swap_out(coremap[victim].paddr);
 			KASSERT(result == 0);
-			freeRamFrames[victim].status = FREE;
+			coremap[victim].status = FREE;
 			ptvictim -> status = SWAPPED;
 			tlb_invalidate_entry(ptvictim -> vaddr);
 		}
@@ -350,10 +350,10 @@ paddr_t getppages(unsigned long npages) {
   	}
   	spinlock_acquire(&freemem_lock);
 	index = paddr / PAGE_SIZE;
-  	freeRamFrames[index].size = npages;
-  	freeRamFrames[index].paddr = paddr;
+  	coremap[index].size = npages;
+  	coremap[index].paddr = paddr;
   	for (i=0; i < npages; i++)
-		freeRamFrames[index + i].status = FIXED;
+		coremap[index + i].status = FIXED;
   	spinlock_release(&freemem_lock);
   	return paddr;
 }
@@ -366,13 +366,13 @@ int freeppages(paddr_t addr, unsigned long npages){
 		return 0; 
 	first = addr/PAGE_SIZE;
 	// KASSERT(allocSize!=NULL);
-	KASSERT(freeRamFrames!=NULL);
+	KASSERT(coremap!=NULL);
 	KASSERT(nRamFrames > first);
 	
 	spinlock_acquire(&freemem_lock);
 	for (i=first; i < first+np; i++) {
-	  freeRamFrames[i].status = FREE;
-	  freeRamFrames[i].size = 0;
+	  coremap[i].status = FREE;
+	  coremap[i].size = 0;
 	}
 	spinlock_release(&freemem_lock);
 	return 1;
@@ -394,15 +394,15 @@ void free_kpages(vaddr_t addr)
 		return;
 	int i;
 	paddr_t paddr = addr - MIPS_KSEG0;
-	KASSERT(freeRamFrames != NULL);
+	KASSERT(coremap != NULL);
 	spinlock_acquire(&freemem_lock);
 	KASSERT(paddr % PAGE_SIZE == 0);
 	long first = paddr/PAGE_SIZE;
 	KASSERT(nRamFrames > first);
-	long size = freeRamFrames[first].size;
+	long size = coremap[first].size;
 	for(i = 0; i < size; i++){
-		freeRamFrames[first + i].status = FREE;
-		freeRamFrames[first + i].size = 0;
+		coremap[first + i].status = FREE;
+		coremap[first + i].size = 0;
 	}
 	spinlock_release(&freemem_lock);
 }

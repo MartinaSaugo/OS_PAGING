@@ -218,7 +218,7 @@ kmain(char *arguments)
 	allocTableActive = 0;
     boot();
         
-    freeRamFrames = coremap_init();
+    coremap = coremap_init();
 
     swap_init();
 

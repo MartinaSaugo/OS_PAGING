@@ -10,7 +10,7 @@ typedef struct coremap_entry {
 	long size;      //= previous allocsize, now all in one
 } coremap_entry_t;
 
-coremap_entry_t *freeRamFrames;
+coremap_entry_t *coremap;
 int nRamFrames;
 int allocTableActive;
 int firstFreeFrame;

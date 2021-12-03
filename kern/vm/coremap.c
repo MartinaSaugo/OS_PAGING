@@ -85,7 +85,7 @@ int coremap_victim_selection(int nvictims){
 		// check if there's an interval of consecutive victims
 		for(i = 0; found && victim + i < nRamFrames && i < nvictims; i++){
 			// a FIXED page cannot be a victim
-			if(freeRamFrames[victim + i].status == FIXED){
+			if(coremap[victim + i].status == FIXED){
 				found = 0;
 				victim += i + 1; // jump directly to the frame after FIXED
 				if(victim >= nRamFrames){ 
