@@ -53,22 +53,3 @@ int pt_add(pt_t *pt, paddr_t paddr, vaddr_t vaddr) {
 	pt -> npages++;
 	return ppindex;
 }
-
-/* implement a round-robin-like victim selection algorithm */
-ptentry_t *pt_select_victim(pt_t *pt){
-	static ptentry_t *next_victim = NULL;
-	/* pagetable is empty */
-	if(pt -> nil -> next == pt -> nil)
-		return NULL;
-	/* if first time, start from the beginning */
-	if(next_victim == NULL)
-		next_victim = pt -> nil -> next;  
-	/* if at the end restart from the top */
-	if(next_victim == pt -> nil){ 
-		next_victim = next_victim -> next;
-	}
-	/* copy the victim */
-	ptentry_t *victim = next_victim; 
-	next_victim = next_victim -> next;
-	return victim;
-}
