@@ -122,7 +122,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop;
 	vaddr_t faultpage;
 	paddr_t paddr;
-	int i, index = 0, result;
+	int i, index = 0, err;
 	uint32_t ehi, elo;
 	struct addrspace *as;
 	int spl;
@@ -189,13 +189,19 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			paddr = getuserppage();
 			KASSERT(paddr != 0);
 			// add new pagetable entry
-			result = pt_add(as -> pt, paddr, faultaddress);
-			KASSERT(result != -1);
+			err = pt_add(as -> pt, paddr, faultaddress);
+			KASSERT(err != -1);
 		}
 		// 1.2 not in memory because it has been swapped - implement swap in
 		else if(pte -> status == SWAPPED){
 			// TODO implement swap in 
-			panic("implement swap in\n");
+			paddr = getuserppage();						// must get a new free frame 
+			err = swap_in(pte -> swap_index, paddr);	// swap in
+			KASSERT(err == 0);
+			pte -> ppage_index = paddr/PAGE_SIZE;		// update ptentry
+			pte -> status = PRESENT;					// page is now present
+			// panic("implement swap in\n");
+			// load page in the coremap
 		}
 		// 1.3 found in memory => update TLB and return 0 (i.e. restart)
 		else {
@@ -223,7 +229,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	spl = splhigh();
 
-	for (i=0; i<NUM_TLB; i++) {
+	for (i=0; i < NUM_TLB; i++) {
 		tlb_read(&ehi, &elo, i);
 		if (elo & TLBLO_VALID) {
 			continue;
@@ -246,10 +252,11 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 }
 
 // TODO  synchronize
-/* get one physical page for the user process */
+/* get one physical page for the user process; 
+ * if it's not available another page it is swapped */
 paddr_t getuserppage(){
 	struct addrspace *as;
-	int i, victim, result;
+	int i, victim, swap_index;
 	if(!isTableActive())
 		panic("getuserppage called while table not active\n");
 	for(i = firstFreeFrame; i < nRamFrames; i++){
@@ -266,8 +273,9 @@ paddr_t getuserppage(){
 	KASSERT(ptvictim != NULL);
 	KASSERT(ptvictim -> ppage_index == victim);
 	KASSERT(ptvictim -> vaddr == vvaddr);
-	result = swap_out(coremap[victim].paddr);
-	KASSERT(result == 0);
+	swap_index = swap_out(coremap[victim].paddr);
+	KASSERT(swap_index >= 0);
+	ptvictim -> swap_index = swap_index;
 	ptvictim -> status = SWAPPED;
 	tlb_invalidate_entry(ptvictim -> vaddr);
 	coremap[victim].status = DIRTY;
@@ -313,7 +321,7 @@ paddr_t getppages(unsigned long npages) {
 	struct addrspace *as;
 	paddr_t paddr;
 	unsigned int i;
-	int result, index, victim;
+	int index, victim, swap_index;
 	// TODO synchronize operations on coremap
 	// TODO check if page has been modified, if not, evict without swapping out
 	// only during bootstrap 
@@ -339,10 +347,11 @@ paddr_t getppages(unsigned long npages) {
 			KASSERT(ptvictim != NULL);
 			KASSERT(ptvictim -> ppage_index == victim);
 			KASSERT(ptvictim -> vaddr == vvaddr);
-			result = swap_out(coremap[victim].paddr);
-			KASSERT(result == 0);
+			swap_index = swap_out(coremap[victim].paddr);
+			KASSERT(swap_index >= 0);
 			coremap[victim].status = FREE;
 			ptvictim -> status = SWAPPED;
+			ptvictim -> swap_index = swap_index;
 			tlb_invalidate_entry(ptvictim -> vaddr);
 		}
 		// now there should be enough space

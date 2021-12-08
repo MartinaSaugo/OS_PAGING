@@ -42,6 +42,7 @@ int pt_add(pt_t *pt, paddr_t paddr, vaddr_t vaddr) {
 	new -> vaddr = vaddr & PAGE_FRAME;
 	new -> ppage_index = ppindex;
 	new -> status = PRESENT;
+	new -> swap_index = 0;
 	// update also the coremap (TODO: synchronize)
 	coremap[ppindex].vaddr = vaddr & PAGE_FRAME;
 	// attach the node to the rest of the list 

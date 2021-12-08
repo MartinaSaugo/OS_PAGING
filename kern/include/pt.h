@@ -14,10 +14,11 @@
 typedef enum { PRESENT, SWAPPED } page_status;
 
 typedef struct ptentry {
-  vaddr_t vaddr;                    // starting virtual address of the page 
-  int ppage_index;                  // maps a virtual page to a physical page (-> coremap)
-  struct ptentry *next;             // implement as linked list
-  page_status status;               // current status (PRESENT / SWAPPED)
+  vaddr_t vaddr;					// starting virtual address of the page 
+  int ppage_index;					// maps a virtual page to a physical page (-> coremap)
+  struct ptentry *next;				// implement as linked list
+  page_status status;				// current status (PRESENT / SWAPPED)
+  int swap_index;					// index in the swaptable
 } ptentry_t; 
 
 typedef struct pt {
