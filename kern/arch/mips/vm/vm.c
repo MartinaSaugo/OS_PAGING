@@ -67,17 +67,17 @@ struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 struct spinlock freemem_lock = SPINLOCK_INITIALIZER;
 
 static int isTableActive () {
-  int active;
-  spinlock_acquire(&freemem_lock);
-  active = allocTableActive;
-  spinlock_release(&freemem_lock);
-  return active;
+	int active;
+	spinlock_acquire(&freemem_lock);
+	active = allocTableActive;
+	spinlock_release(&freemem_lock);
+	return active;
 }
 
 void
 vm_bootstrap(void)
 { 
-    // do nothing
+	// do nothing
 }
 
 /*
@@ -89,20 +89,20 @@ vm_bootstrap(void)
  */
 void dumbvm_can_sleep(void)
 {
-    if (CURCPU_EXISTS()) {
-        /* must not hold spinlocks */
-        KASSERT(curcpu->c_spinlocks == 0);
+	if (CURCPU_EXISTS()) {
+		/* must not hold spinlocks */
+		KASSERT(curcpu->c_spinlocks == 0);
 
-        /* must not be in an interrupt handler */
-        KASSERT(curthread->t_in_interrupt == 0);
-    }
+		/* must not be in an interrupt handler */
+		KASSERT(curthread->t_in_interrupt == 0);
+	}
 }
 
 void
 vm_tlbshootdown(const struct tlbshootdown *ts)
 {
-    (void)ts;
-    panic("dumbvm tried to do tlb shootdown?!\n");
+	(void)ts;
+	panic("dumbvm tried to do tlb shootdown?!\n");
 }
 
 void tlb_invalidate_entry(vaddr_t remove_vaddr) {
@@ -113,7 +113,7 @@ void tlb_invalidate_entry(vaddr_t remove_vaddr) {
 	if (index >= 0) {
 		tlb_write(TLBHI_INVALID(index), TLBLO_INVALID(), index);
 	}
-        splx(spl);	
+		splx(spl);	
 }
 
 int
@@ -277,7 +277,7 @@ paddr_t getuserppage(){
 paddr_t getfreeppages(unsigned long npages) {
 	paddr_t addr;    
 	long i, first, found, np = (long)npages;
-     
+	 
 	if (!isTableActive()) 
 		return 0; 
 
@@ -312,22 +312,22 @@ paddr_t getfreeppages(unsigned long npages) {
 paddr_t getppages(unsigned long npages) {
 	struct addrspace *as;
 	paddr_t paddr;
-  	unsigned int i;
+		unsigned int i;
 	int result, index, victim;
 	// TODO synchronize operations on coremap
 	// TODO check if page has been modified, if not, evict without swapping out
 	// only during bootstrap 
-  	if(!isTableActive()){
+		if(!isTableActive()){
 		spinlock_acquire(&stealmem_lock);
-  	  	paddr = ram_stealmem(npages);
-  	  	spinlock_release(&stealmem_lock);
-  	  	return paddr;
-  	}
-  	// try freed pages first 
-  	// TODO modify here! (remove getfreeppages)
-  	paddr = getfreeppages(npages);
+		  	paddr = ram_stealmem(npages);
+		  	spinlock_release(&stealmem_lock);
+		  	return paddr;
+		}
+		// try freed pages first 
+		// TODO modify here! (remove getfreeppages)
+		paddr = getfreeppages(npages);
 	// no more free space, SWAP OUT
-  	if (paddr == 0){
+		if (paddr == 0){
 		as = proc_getas();
 		// select n consecutive victims
 		victim = coremap_victim_selection(npages);
@@ -347,15 +347,15 @@ paddr_t getppages(unsigned long npages) {
 		// now there should be enough space
 		paddr = getfreeppages(npages);
 		KASSERT(paddr != 0);
-  	}
-  	spinlock_acquire(&freemem_lock);
+		}
+		spinlock_acquire(&freemem_lock);
 	index = paddr / PAGE_SIZE;
-  	coremap[index].size = npages;
-  	coremap[index].paddr = paddr;
-  	for (i=0; i < npages; i++)
+		coremap[index].size = npages;
+		coremap[index].paddr = paddr;
+		for (i=0; i < npages; i++)
 		coremap[index + i].status = FIXED;
-  	spinlock_release(&freemem_lock);
-  	return paddr;
+		spinlock_release(&freemem_lock);
+		return paddr;
 }
 
 int freeppages(paddr_t addr, unsigned long npages){
@@ -410,94 +410,94 @@ void free_kpages(vaddr_t addr)
 struct addrspace *
 as_create(void)
 {
-    struct addrspace *as = kmalloc(sizeof(struct addrspace));
-    if (as==NULL) {
-        return NULL;
-    }
-      
-    as->pt = pt_init();
+	struct addrspace *as = kmalloc(sizeof(struct addrspace));
+	if (as==NULL) {
+		return NULL;
+	}
+	  
+	as->pt = pt_init();
 
-    as->as_vbase1 = 0;
-    as->as_pbase1 = 0;
-    as->as_npages1 = 0;
-    as->as_vbase2 = 0;
-    as->as_pbase2 = 0;
-    as->as_npages2 = 0;
-    as->as_stackpbase = 0;
+	as->as_vbase1 = 0;
+	as->as_pbase1 = 0;
+	as->as_npages1 = 0;
+	as->as_vbase2 = 0;
+	as->as_pbase2 = 0;
+	as->as_npages2 = 0;
+	as->as_stackpbase = 0;
 
-    return as;
+	return as;
 }
 
 void as_destroy(struct addrspace *as){
-  dumbvm_can_sleep();
-  int spl, i;
-  spl = splhigh();
-  for (i=0; i<NUM_TLB; i++) 
-    tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
-  freeppages(as->as_pbase1, as->as_npages1);
-  freeppages(as->as_pbase2, as->as_npages2);
-  freeppages(as->as_stackpbase, DUMBVM_STACKPAGES);
-  kfree(as);
- splx(spl);
+	dumbvm_can_sleep();
+	int spl, i;
+	spl = splhigh();
+	for (i=0; i<NUM_TLB; i++) 
+	tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+	freeppages(as->as_pbase1, as->as_npages1);
+	freeppages(as->as_pbase2, as->as_npages2);
+	freeppages(as->as_stackpbase, DUMBVM_STACKPAGES);
+	kfree(as);
+	splx(spl);
 }
 
 void
 as_activate(void)
 {
-    //int i, spl;
-    struct addrspace *as;
+	//int i, spl;
+	struct addrspace *as;
 
-    as = proc_getas();
-    if (as == NULL) {
-        return;
-    }
+	as = proc_getas();
+	if (as == NULL) {
+		return;
+	}
 }
 
 void
 as_deactivate(void)
 {
-    /* nothing */
+	/* nothing */
 }
 
 int
 as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
-         int readable, int writeable, int executable)
+		 int readable, int writeable, int executable)
 {
-    size_t npages;
+	size_t npages;
 
-    dumbvm_can_sleep();
+	dumbvm_can_sleep();
 
-    /* Align the region. First, the base... */
-    sz += vaddr & ~(vaddr_t)PAGE_FRAME;
-    vaddr &= PAGE_FRAME;
+	/* Align the region. First, the base... */
+	sz += vaddr & ~(vaddr_t)PAGE_FRAME;
+	vaddr &= PAGE_FRAME;
 
-    /* ...and now the length. */
-    sz = (sz + PAGE_SIZE - 1) & PAGE_FRAME;
+	/* ...and now the length. */
+	sz = (sz + PAGE_SIZE - 1) & PAGE_FRAME;
 
-    npages = sz / PAGE_SIZE;
+	npages = sz / PAGE_SIZE;
 
-    /* We don't use these - all pages are read-write */
-    (void)readable;
-    (void)writeable;
-    (void)executable;
+	/* We don't use these - all pages are read-write */
+	(void)readable;
+	(void)writeable;
+	(void)executable;
 
-    if (as->as_vbase1 == 0) {
-        as->as_vbase1 = vaddr;
-        as->as_npages1 = npages;
-        return 0;
-    }
+	if (as->as_vbase1 == 0) {
+		as->as_vbase1 = vaddr;
+		as->as_npages1 = npages;
+		return 0;
+	}
 
-    if (as->as_vbase2 == 0) {
-        as->as_vbase2 = vaddr;
-        as->as_npages2 = npages;
-        return 0;
-    }
+	if (as->as_vbase2 == 0) {
+		as->as_vbase2 = vaddr;
+		as->as_npages2 = npages;
+		return 0;
+	}
 
-    /*
-     * Support for more than two regions is not available.
-     */
-    kprintf("dumbvm: Warning: too many regions\n");
-    return ENOSYS;
+	/*
+	 * Support for more than two regions is not available.
+	 */
+	kprintf("dumbvm: Warning: too many regions\n");
+	return ENOSYS;
 }
 
 /* 
@@ -505,7 +505,7 @@ static
 void
 as_zero_region(paddr_t paddr, unsigned npages)
 {
-    bzero((void *)PADDR_TO_KVADDR(paddr), npages * PAGE_SIZE);
+	bzero((void *)PADDR_TO_KVADDR(paddr), npages * PAGE_SIZE);
 }
 */
 
@@ -536,42 +536,42 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 int
 as_copy(struct addrspace *old, struct addrspace **ret)
 {
-    struct addrspace *new;
+	struct addrspace *new;
 
-    dumbvm_can_sleep();
+	dumbvm_can_sleep();
 
-    new = as_create();
-    if (new==NULL) {
-        return ENOMEM;
-    }
+	new = as_create();
+	if (new==NULL) {
+		return ENOMEM;
+	}
 
-    new->as_vbase1 = old->as_vbase1;
-    new->as_npages1 = old->as_npages1;
-    new->as_vbase2 = old->as_vbase2;
-    new->as_npages2 = old->as_npages2;
+	new->as_vbase1 = old->as_vbase1;
+	new->as_npages1 = old->as_npages1;
+	new->as_vbase2 = old->as_vbase2;
+	new->as_npages2 = old->as_npages2;
 
-    /* (Mis)use as_prepare_load to allocate some physical memory. */
-    if (as_prepare_load(new)) {
-        as_destroy(new);
-        return ENOMEM;
-    }
+	/* (Mis)use as_prepare_load to allocate some physical memory. */
+	if (as_prepare_load(new)) {
+		as_destroy(new);
+		return ENOMEM;
+	}
 
-    KASSERT(new->as_pbase1 != 0);
-    KASSERT(new->as_pbase2 != 0);
-    KASSERT(new->as_stackpbase != 0);
+	KASSERT(new->as_pbase1 != 0);
+	KASSERT(new->as_pbase2 != 0);
+	KASSERT(new->as_stackpbase != 0);
 
-    memmove((void *)PADDR_TO_KVADDR(new->as_pbase1),
-        (const void *)PADDR_TO_KVADDR(old->as_pbase1),
-        old->as_npages1*PAGE_SIZE);
+	memmove((void *)PADDR_TO_KVADDR(new->as_pbase1),
+		(const void *)PADDR_TO_KVADDR(old->as_pbase1),
+		old->as_npages1*PAGE_SIZE);
 
-    memmove((void *)PADDR_TO_KVADDR(new->as_pbase2),
-        (const void *)PADDR_TO_KVADDR(old->as_pbase2),
-        old->as_npages2*PAGE_SIZE);
+	memmove((void *)PADDR_TO_KVADDR(new->as_pbase2),
+		(const void *)PADDR_TO_KVADDR(old->as_pbase2),
+		old->as_npages2*PAGE_SIZE);
 
-    memmove((void *)PADDR_TO_KVADDR(new->as_stackpbase),
-        (const void *)PADDR_TO_KVADDR(old->as_stackpbase),
-        DUMBVM_STACKPAGES*PAGE_SIZE);
+	memmove((void *)PADDR_TO_KVADDR(new->as_stackpbase),
+		(const void *)PADDR_TO_KVADDR(old->as_stackpbase),
+		DUMBVM_STACKPAGES*PAGE_SIZE);
 
-    *ret = new;
-    return 0;
+	*ret = new;
+	return 0;
 }
