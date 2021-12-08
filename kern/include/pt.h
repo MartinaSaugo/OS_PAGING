@@ -8,7 +8,6 @@
 #include <coremap.h>
 #include <current.h>
 #include <spinlock.h>
-#include <machine/vm.h> // TODO: check if it's needed
 
 // PRESENT = in memory
 // SWAPPED = in disk
