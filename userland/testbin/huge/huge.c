@@ -41,9 +41,9 @@
 #include <stdlib.h>
 
 #define PageSize	4096  
-/* #define PageSize	8  */
+// #define PageSize	8
 #define NumPages	512  
-/* #define NumPages	8  */
+// #define NumPages	8 
 
 int sparse[NumPages][PageSize];	/* use only the first element in the row */
 
@@ -56,11 +56,13 @@ main(void)
 
 	/* move number in so that sparse[i][0]=i */
 	for (i=0; i<NumPages; i++) {
-        printf("%p\n", &sparse[i][0]);
+		printf("huge: accessing sparse[%d][%d]\n", i, 0);
 		sparse[i][0]=i;
+		// printf("huge: row %d\n", i);
 	}
 
-    printf("%p\n", &sparse[i][0]);
+
+
 	printf("stage [1] done\n");
 
 	/* increment each location 5 times */

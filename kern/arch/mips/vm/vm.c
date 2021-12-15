@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
  *    The President and Fellows of Harvard College.
  *
@@ -129,6 +129,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	faultpage = faultaddress & PAGE_FRAME;
 
+	kprintf("++ vm_fault: page 0x%x\n", faultpage);
+
 	DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultpage);
 	as = proc_getas();
 
@@ -145,7 +147,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	switch (faulttype) {
 		/* READONLY = 2 */
 		case VM_FAULT_READONLY: // We always create pages read-write, so we can't get this 
-		  panic("dumbvm: got VM_FAULT_READONLY\n");
+		  panic("dumbvm: got VM_FAULT_READONLY \n");
 		/* WRITE = 1 */ 
 		case VM_FAULT_WRITE:
 			break;
@@ -187,6 +189,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		// 1.1 not in memory and not SWAPPED - search space in coremap and allocate
 		if(pte == NULL){
 			paddr = getuserppage();
+			index = paddr / PAGE_SIZE;
+			coremap[index].vaddr = faultaddress;
 			KASSERT(paddr != 0);
 			// add new pagetable entry
 			err = pt_add(as -> pt, paddr, faultaddress);
@@ -194,14 +198,12 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		}
 		// 1.2 not in memory because it has been swapped - implement swap in
 		else if(pte -> status == SWAPPED){
-			// TODO implement swap in 
-			paddr = getuserppage();						// must get a new free frame 
+			paddr = getuserppage();						// get a new free frame 
+			kprintf("\tswap in: page 0x%x in frame %d\n", faultpage, paddr/PAGE_SIZE);
 			err = swap_in(pte -> swap_index, paddr);	// swap in
 			KASSERT(err == 0);
 			pte -> ppage_index = paddr/PAGE_SIZE;		// update ptentry
 			pte -> status = PRESENT;					// page is now present
-			// panic("implement swap in\n");
-			// load page in the coremap
 		}
 		// 1.3 found in memory => update TLB and return 0 (i.e. restart)
 		else {
@@ -215,13 +217,18 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	}
 
 	index = paddr / PAGE_SIZE;
+	(void) index;
 
+	/*
 	if(faulttype == VM_FAULT_READONLY)
 		kprintf("(O) index: %d, paddr: %x\n", index, paddr);
 	if(faulttype == VM_FAULT_WRITE)
 		kprintf("(W) index: %d, paddr: %x\n", index, paddr);
 	if(faulttype == VM_FAULT_READ)
 		kprintf("(R) index: %d, paddr: %x\n", index, paddr);
+	*/
+
+	kprintf("-- vm_fault: frame %d, paddr: 0x%x, vaddr: 0x%x\n", index, paddr, faultpage);
 	
 	/* make sure it's page-aligned */
 	KASSERT((paddr & PAGE_FRAME) == paddr);
@@ -256,29 +263,39 @@ vm_fault(int faulttype, vaddr_t faultaddress)
  * if it's not available another page it is swapped */
 paddr_t getuserppage(){
 	struct addrspace *as;
-	int i, victim, swap_index;
+	int victim, swap_index, freefound = 0;
+
 	if(!isTableActive())
 		panic("getuserppage called while table not active\n");
-	for(i = firstFreeFrame; i < nRamFrames; i++){
-		if(coremap[i].status == CLEAN || coremap[i].status == FREE){
-			coremap[i].status = DIRTY;
-			return (paddr_t) (i * PAGE_SIZE);
+
+	// try to find a free frame
+	for(victim = firstFreeFrame; !freefound && victim < nRamFrames; victim++){
+		if(coremap[victim].status == CLEAN || coremap[victim].status == FREE){
+			freefound = 1;
+			break;
 		}
 	}
-	as = proc_getas();
-	// no more space, swap out
-	victim = coremap_victim_selection(1);
-	vaddr_t vvaddr = coremap[victim].vaddr;
-	ptentry_t *ptvictim = pt_search(as -> pt, vvaddr);
-	KASSERT(ptvictim != NULL);
-	KASSERT(ptvictim -> ppage_index == victim);
-	KASSERT(ptvictim -> vaddr == vvaddr);
-	swap_index = swap_out(coremap[victim].paddr);
-	KASSERT(swap_index >= 0);
-	ptvictim -> swap_index = swap_index;
-	ptvictim -> status = SWAPPED;
-	tlb_invalidate_entry(ptvictim -> vaddr);
+
+	if(!freefound){
+		// no more free frames: swap out
+		as = proc_getas();
+		victim = coremap_victim_selection(1);
+		vaddr_t vvaddr = coremap[victim].vaddr;
+		ptentry_t *ptvictim = pt_search(as -> pt, vvaddr);
+		KASSERT(ptvictim != NULL);
+		KASSERT(ptvictim -> ppage_index == victim);
+		KASSERT(ptvictim -> vaddr == vvaddr);
+		kprintf("\tswap out: frame %d (0x%x) which contains 0x%x\n", victim, coremap[victim].paddr, coremap[victim].vaddr);
+		swap_index = swap_out(coremap[victim].paddr);
+		KASSERT(swap_index >= 0);
+		ptvictim -> swap_index = swap_index;
+		ptvictim -> status = SWAPPED;
+		tlb_invalidate_entry(ptvictim -> vaddr);
+	}
+
 	coremap[victim].status = DIRTY;
+	coremap[victim].paddr = victim * PAGE_SIZE;
+	coremap[victim].size = 1;
 	return (paddr_t) (victim * PAGE_SIZE);
 }
 

@@ -51,7 +51,6 @@ void swap_init (void){
  * where index is the index of a free page in the swap file
  * and page is the physical page to write in the swap file
  */
-// TODO: when the swap file is full, return an error and free a page 
 // anyway (it means that you must reload the page from the ELF)
 int write_page(int index, paddr_t page){
 	//struct thread *th = curthread; //serve?
@@ -61,7 +60,6 @@ int write_page(int index, paddr_t page){
 	off_t pos = index * PAGE_SIZE; 
 	int err = 0;
 	(void) err;
-	//MUST FIX! -> significa che ci serve l'indirizzo virtuale? In teoria ce l'abbiamo(?)
 	page = PADDR_TO_KVADDR(page); 
 	uio_kinit(&iov, &pageuio, (void *)page, PAGE_SIZE, pos, UIO_WRITE);
 	err = VOP_WRITE(swapspace, &pageuio); 
@@ -98,6 +96,7 @@ int swap_out(paddr_t page){
 	else {
 		err = write_page(index, page);
 		swaptable[index].empty = 0;
+		// kprintf("swapout %d: %x\n", index, *((int *) (page + 10) ));
 	}
 	if(err)
 		return -1;
@@ -119,6 +118,5 @@ int swap_in(int index, paddr_t paddr){
 
 /*
 	int evict_page(struct page* page); 
-	int swap_in (struct page* page); 
 	int swap_clean(struct addrspace *as, vaddr_t va);
 */

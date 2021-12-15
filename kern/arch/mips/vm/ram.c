@@ -164,4 +164,4 @@ ram_getfirstfree(void)
 	ret = firstpaddr;
 	firstpaddr = lastpaddr = 0;
 	return ret;
-}
+  }
