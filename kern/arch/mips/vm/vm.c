@@ -208,6 +208,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		// 1.3 found in memory => update TLB and return 0 (i.e. restart)
 		else {
 			paddr = pte -> ppage_index * PAGE_SIZE;
+			(void) paddr;
 		}
 	}
 	// 0. invalid address = segmentation fault
@@ -296,6 +297,7 @@ paddr_t getuserppage(){
 	coremap[victim].status = DIRTY;
 	coremap[victim].paddr = victim * PAGE_SIZE;
 	coremap[victim].size = 1;
+
 	return (paddr_t) (victim * PAGE_SIZE);
 }
 
@@ -306,7 +308,7 @@ paddr_t getfreeppages(unsigned long npages) {
 	if (!isTableActive()) 
 		return 0; 
 
-	spinlock_acquire(&freemem_lock);
+	// spinlock_acquire(&freemem_lock);
 
 	first = -1;
 	found = -1; 
@@ -327,7 +329,7 @@ paddr_t getfreeppages(unsigned long npages) {
 	if (found < 0) 
 		return 0;
 	addr = (paddr_t) found * PAGE_SIZE;
-	spinlock_release(&freemem_lock);
+	// spinlock_release(&freemem_lock);
 	return addr;
 }
 

@@ -95,16 +95,17 @@ int coremap_victim_selection(int nvictims){
 				victimsfound = 0;
 			}
 		}
+		if(victimsfound == nvictims){
+			victim = i - nvictims;
+			found = 1;
+		}
 		if(i >= nRamFrames){
 			i = firstFreeFrame;
 			iteration++;
 			if(iteration >= 2)
 				panic("no more victims in the coremap\n");
 		}
-		if(victimsfound == nvictims)
-			found = 1;
 	}
-	victim = i - nvictims;
 	KASSERT(victimsfound == nvictims);
 	next_victim = victim + nvictims;
 	return victim;
