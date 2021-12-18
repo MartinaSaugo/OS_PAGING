@@ -50,7 +50,6 @@ void vm_bootstrap(void);
 int vm_fault(int faulttype, vaddr_t faultaddress);
 
 paddr_t getuserppage(void);
-paddr_t getfreeppages(unsigned long npages);
 paddr_t getppages(unsigned long npages);
 int freeppages(paddr_t addr, unsigned long npages);
 

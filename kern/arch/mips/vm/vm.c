@@ -301,46 +301,14 @@ paddr_t getuserppage(){
 	return (paddr_t) (victim * PAGE_SIZE);
 }
 
-paddr_t getfreeppages(unsigned long npages) {
-	paddr_t addr;    
-	long i, first, found, np = (long)npages;
-	 
-	if (!isTableActive()) 
-		return 0; 
-
-	// spinlock_acquire(&freemem_lock);
-
-	first = -1;
-	found = -1; 
-
-	for (i = firstFreeFrame; i < nRamFrames; i++) {
-		if (coremap[i].status == FREE || coremap[i].status == CLEAN){
-			if (coremap[i-1].status != FREE && coremap[i-1].status != CLEAN)
-				first = i; // set first free in an interval 
-			if (i-first+1 >= np) {
-				found = first;
-				break;
-			}
-		}
-	}
-	// try to find: if not found, found = -1 
-	// no more free space :we return 0 as special value since first pages
-	// are occupied by kernel
-	if (found < 0) 
-		return 0;
-	addr = (paddr_t) found * PAGE_SIZE;
-	// spinlock_release(&freemem_lock);
-	return addr;
-}
-
 /* getppages should only be called by the kernel (via alloc_kpages); 
  * it allocates a contiguous sequence of FIXED frames; these frames are
  * not referenced by the pagetable, so they should NEVER be swapped out */
 paddr_t getppages(unsigned long npages) {
 	struct addrspace *as;
 	paddr_t paddr;
-	unsigned int i;
-	int index, victim, swap_index;
+	unsigned int freePages, i;
+	int index, victim, swap_index, k;
 	// TODO synchronize operations on coremap
 	// TODO check if page has been modified, if not, evict without swapping out
 	// only during bootstrap 
@@ -350,40 +318,40 @@ paddr_t getppages(unsigned long npages) {
 	  	spinlock_release(&stealmem_lock);
 	  	return paddr;
 	}
-	// try freed pages first 
-	// TODO modify here! (remove getfreeppages)
-	paddr = getfreeppages(npages);
-	// no more free space, SWAP OUT
-	if (paddr == 0){
+
+	for(k = firstFreeFrame; k < nRamFrames; k++){
+		if(coremap[k].status == FREE || coremap[k].status == CLEAN)
+			freePages++;
+		else 
+			freePages = 0;
+		if(freePages == npages){
+			paddr = (k - npages + 1) * PAGE_SIZE;
+			break;
+		}
+	}
+
+	if(freePages != npages){
 		as = proc_getas();
-		// select n consecutive victims
 		victim = coremap_victim_selection(npages);
-		// swap out victims 
-		for(i=0; i < npages; i++){
+		for(i = 0; i < npages; i++){
 			// vvaddr == victim's vaddr
-			vaddr_t vvaddr = coremap[victim].vaddr;
+			vaddr_t vvaddr = coremap[victim + i].vaddr;
 			ptentry_t *ptvictim = pt_search(as -> pt, vvaddr);
 			KASSERT(ptvictim != NULL);
-			KASSERT(ptvictim -> ppage_index == victim);
+			KASSERT(ptvictim -> ppage_index == (int) (victim + i)); // FIXME
 			KASSERT(ptvictim -> vaddr == vvaddr);
-			swap_index = swap_out(coremap[victim].paddr);
+			swap_index = swap_out(coremap[victim + i].paddr);
 			KASSERT(swap_index >= 0);
-			coremap[victim].status = FREE;
+			coremap[victim + i].status = FIXED;
 			ptvictim -> status = SWAPPED;
 			ptvictim -> swap_index = swap_index;
 			tlb_invalidate_entry(ptvictim -> vaddr);
 		}
-		// now there should be enough space
-		paddr = getfreeppages(npages);
-		KASSERT(paddr != 0);
 	}
-	spinlock_acquire(&freemem_lock);
+
 	index = paddr / PAGE_SIZE;
 	coremap[index].size = npages;
 	coremap[index].paddr = paddr;
-	for (i=0; i < npages; i++)
-		coremap[index + i].status = FIXED;
-	spinlock_release(&freemem_lock);
 	return paddr;
 }
 
