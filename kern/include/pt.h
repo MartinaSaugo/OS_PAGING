@@ -26,5 +26,6 @@ typedef struct pt {
 pt_t* pt_init(void);
 ptentry_t *pt_search(pt_t *, vaddr_t);
 int pt_add(pt_t *, paddr_t, vaddr_t);
+int pt_destroy(pt_t **pt);
 
 #endif

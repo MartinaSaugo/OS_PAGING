@@ -1,5 +1,6 @@
 #include <pt.h>
 #include <coremap.h> 
+#include <swapfile.h>
 
 pt_t* pt_init(void)
 {
@@ -51,4 +52,24 @@ int pt_add(pt_t *pt, paddr_t paddr, vaddr_t vaddr) {
 	pt -> nil -> next = new;
 	pt -> npages++;
 	return ppindex;
+}
+
+int pt_destroy(pt_t **pt){
+	ptentry_t *p, *q;
+	paddr_t paddr;
+	ptentry_t *nil = (*pt) -> nil;
+	for(p = nil, q = p -> next; q != nil; q = q -> next){
+		if(q -> swapped){
+			// TODO should also delete file?
+			swap_unmark(q -> swap_index);
+		}
+		else {
+			paddr = q -> ppage_index * PAGE_SIZE;
+			freeuserppage(paddr);
+		}
+		p -> next = q -> next;
+		kfree(q);
+	}
+	kfree(*pt);
+	return 0;
 }

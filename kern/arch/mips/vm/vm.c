@@ -362,24 +362,22 @@ paddr_t getppages(unsigned long npages) {
 	return paddr;
 }
 
-int freeppages(paddr_t addr, unsigned long npages){
-	panic("implement freeppages\n");
-	long i, first, np=(long)npages;	
-	// kernel only
-	if (!isTableActive()) 
-		return 0; 
-	first = addr/PAGE_SIZE;
-	// KASSERT(allocSize!=NULL);
-	KASSERT(coremap!=NULL);
-	KASSERT(nRamFrames > first);
-	
+/* this should be called for user pages only, so it frees a single page */
+int freeuserppage(paddr_t addr){
+
 	spinlock_acquire(&freemem_lock);
-	for (i=first; i < first+np; i++) {
-	  coremap[i].status = FREE;
-	  coremap[i].size = 0;
-	}
+
+	KASSERT((addr % PAGE_SIZE) == 0);			// make sure it's page-aligned
+	unsigned int index = addr / PAGE_SIZE;
+	KASSERT(coremap[index].status != FIXED);	// make sure it's not a kernel page
+
+	coremap[index].status = FREE;
+	coremap[index].size = 0;
+	coremap[index].vaddr = 0;
+	coremap[index].paddr = 0x0;
+	
 	spinlock_release(&freemem_lock);
-	return 1;
+	return 0;
 }
 
 vaddr_t alloc_kpages(unsigned npages)
@@ -433,16 +431,12 @@ as_create(void)
 }
 
 void as_destroy(struct addrspace *as){
-	dumbvm_can_sleep();
-	int spl, i;
-	spl = splhigh();
-	for (i=0; i<NUM_TLB; i++) 
-	tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
-	freeppages(as->as_pbase1, as->as_npages1);
-	freeppages(as->as_pbase2, as->as_npages2);
-	freeppages(as->as_stackpbase, DUMBVM_STACKPAGES);
+	KASSERT(as != NULL);
+	KASSERT(as -> pt != NULL);
+	// destroy pagetable and free memory
+	pt_destroy(&(as -> pt));
 	kfree(as);
-	splx(spl);
+	// splx(spl);
 }
 
 void

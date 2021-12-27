@@ -116,6 +116,12 @@ int swap_in(int index, paddr_t paddr){
 	return 0;
 }
 
+void swap_unmark(int index){
+	// check that page is swapped
+	KASSERT(swaptable[index].empty == 0);
+	swaptable[index].empty = 1;
+}
+
 /*
 	int evict_page(struct page* page); 
 	int swap_clean(struct addrspace *as, vaddr_t va);
