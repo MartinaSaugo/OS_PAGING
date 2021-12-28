@@ -160,7 +160,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	// Assert that the address space has been set up properly. 
 	KASSERT(as -> pt != NULL);
-	KASSERT(as-> start_region != NULL);
+	KASSERT(as-> start_region == NULL);
 
 	curr = as->start_region;
 	while(curr!=NULL)
