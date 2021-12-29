@@ -58,7 +58,7 @@ int pt_destroy(pt_t **pt){
 	ptentry_t *p, *q;
 	paddr_t paddr;
 	ptentry_t *nil = (*pt) -> nil;
-	for(p = nil, q = p -> next; q != nil; q = q -> next){
+	for(p = nil, q = p -> next; q != nil; q = p -> next){
 		if(q -> swapped){
 			// TODO should also delete file?
 			swap_unmark(q -> swap_index);

@@ -365,7 +365,7 @@ paddr_t getppages(unsigned long npages) {
 /* this should be called for user pages only, so it frees a single page */
 int freeuserppage(paddr_t addr){
 
-	spinlock_acquire(&freemem_lock);
+	// spinlock_acquire(&freemem_lock);
 
 	KASSERT((addr % PAGE_SIZE) == 0);			// make sure it's page-aligned
 	unsigned int index = addr / PAGE_SIZE;
@@ -376,7 +376,7 @@ int freeuserppage(paddr_t addr){
 	coremap[index].vaddr = 0;
 	coremap[index].paddr = 0x0;
 	
-	spinlock_release(&freemem_lock);
+	// spinlock_release(&freemem_lock);
 	return 0;
 }
 
@@ -397,6 +397,7 @@ void free_kpages(vaddr_t addr)
 	int i;
 	paddr_t paddr = addr - MIPS_KSEG0;
 	KASSERT(coremap != NULL);
+	// KASSERT page == FIXED
 	spinlock_acquire(&freemem_lock);
 	KASSERT(paddr % PAGE_SIZE == 0);
 	long first = paddr/PAGE_SIZE;
@@ -433,10 +434,14 @@ as_create(void)
 void as_destroy(struct addrspace *as){
 	KASSERT(as != NULL);
 	KASSERT(as -> pt != NULL);
+	int spl = splhigh();
 	// destroy pagetable and free memory
 	pt_destroy(&(as -> pt));
+	for(int i = 0; i < NUM_TLB; i++){
+		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+	}
 	kfree(as);
-	// splx(spl);
+	splx(spl);
 }
 
 void
