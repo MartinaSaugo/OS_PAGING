@@ -418,26 +418,26 @@ as_create(void)
 
 void as_destroy(struct addrspace *as)
 {
-  KASSERT(as != NULL);
+	KASSERT(as != NULL);
 	KASSERT(as -> pt != NULL);
-  KASSERT(as-> start_region!=NULL);
+	KASSERT(as-> start_region!=NULL);
 	struct region *curr, *prev;
-	int spl, i;
+	int spl;
 	spl = splhigh();
-  //free regions
-  curr = as -> start_region;
+	//free regions
+	curr = as -> start_region;
 	while(curr!=NULL)
 	{
 		prev = curr;
-		curr = curr->next
+		curr = curr->next;
 		kfree(prev);
-  }
-  //free pt
+	}
+	//free pt
 	pt_destroy(&(as -> pt));
 	for(int i = 0; i < NUM_TLB; i++)
 		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
-  //free as
-  kfree(as);
+	//free as
+	kfree(as);
 	splx(spl);
 }
 
