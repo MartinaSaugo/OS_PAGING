@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *    The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,8 +49,12 @@
 #include <syscall.h>
 #include <test.h>
 #include <version.h>
+#include <swapfile.h>
 #include "hello.h"
 #include "autoconf.h"  // for pseudoconfig
+
+#include <coremap.h>
+
 
 
 /*
@@ -76,69 +80,69 @@ static const char harvard_copyright[] =
 /*
  * Initial boot sequence.
  */
+
 static
 void
 boot(void)
 {
-	/*
-	 * The order of these is important!
-	 * Don't go changing it without thinking about the consequences.
-	 *
-	 * Among other things, be aware that console output gets
-	 * buffered up at first and does not actually appear until
-	 * mainbus_bootstrap() attaches the console device. This can
-	 * be remarkably confusing if a bug occurs at this point. So
-	 * don't put new code before mainbus_bootstrap if you don't
-	 * absolutely have to.
-	 *
-	 * Also note that the buffer for this is only 1k. If you
-	 * overflow it, the system will crash without printing
-	 * anything at all. You can make it larger though (it's in
-	 * dev/generic/console.c).
-	 */
+    /*
+     * The order of these is important!
+     * Don't go changing it without thinking about the consequences.
+     *
+     * Among other things, be aware that console output gets
+     * buffered up at first and does not actually appear until
+     * mainbus_bootstrap() attaches the console device. This can
+     * be remarkably confusing if a bug occurs at this point. So
+     * don't put new code before mainbus_bootstrap if you don't
+     * absolutely have to.
+     *
+     * Also note that the buffer for this is only 1k. If you
+     * overflow it, the system will crash without printing
+     * anything at all. You can make it larger though (it's in
+     * dev/generic/console.c).
+     */
+    kprintf("\n");
+    kprintf("OS/161 base system version %s\n", BASE_VERSION);
+    kprintf("%s", harvard_copyright);
+    kprintf("\n");
 
-	kprintf("\n");
-	kprintf("OS/161 base system version %s\n", BASE_VERSION);
-	kprintf("%s", harvard_copyright);
-	kprintf("\n");
+    kprintf("Laudadio-Sara-Saugo's system version %s (%s #%d)\n",
+        GROUP_VERSION, buildconfig, buildversion);
+    kprintf("\n");
 
-	kprintf("Laudadio-Sara-Saugo's system version %s (%s #%d)\n",
-		GROUP_VERSION, buildconfig, buildversion);
-	kprintf("\n");
+    /* Early initialization. */
+    ram_bootstrap();
+    proc_bootstrap();
+    thread_bootstrap();
+    hardclock_bootstrap();
+    vfs_bootstrap();
+    kheap_nextgeneration();
 
-	/* Early initialization. */
-	ram_bootstrap();
-	proc_bootstrap();
-	thread_bootstrap();
-	hardclock_bootstrap();
-	vfs_bootstrap();
-	kheap_nextgeneration();
+    /* Probe and initialize devices. Interrupts should come on. */
+    kprintf("Device sprobe...\n");
+    KASSERT(curthread->t_curspl > 0);
+    mainbus_bootstrap();
+    KASSERT(curthread->t_curspl == 0);
+    /* Now do pseudo-devices. */
+    pseudoconfig();
+    kprintf("\n");
+    kheap_nextgeneration();
 
-	/* Probe and initialize devices. Interrupts should come on. */
-	kprintf("Device sprobe...\n");
-	KASSERT(curthread->t_curspl > 0);
-	mainbus_bootstrap();
-	KASSERT(curthread->t_curspl == 0);
-	/* Now do pseudo-devices. */
-	pseudoconfig();
-	kprintf("\n");
-	kheap_nextgeneration();
+    /* Late phase of initialization. */
+    /* vm_bootstrap(); */
+    kprintf_bootstrap();
+    thread_start_cpus();
 
-	/* Late phase of initialization. */
-	vm_bootstrap();
-	kprintf_bootstrap();
-	thread_start_cpus();
+    /* Default bootfs - but ignore failure, in case emu0 doesn't exist */
+    vfs_setbootfs("emu0");
 
-	/* Default bootfs - but ignore failure, in case emu0 doesn't exist */
-	vfs_setbootfs("emu0");
+    kheap_nextgeneration();
 
-	kheap_nextgeneration();
-
-	/*
-	 * Make sure various things aren't screwed up.
-	 */
-	COMPILE_ASSERT(sizeof(userptr_t) == sizeof(char *));
-	COMPILE_ASSERT(sizeof(*(userptr_t)0) == sizeof(char));
+    /*
+     * Make sure various things aren't screwed up.
+     */
+    COMPILE_ASSERT(sizeof(userptr_t) == sizeof(char *));
+    COMPILE_ASSERT(sizeof(*(userptr_t)0) == sizeof(char));
 }
 
 /*
@@ -149,15 +153,15 @@ void
 shutdown(void)
 {
 
-	kprintf("Shutting down.\n");
+    kprintf("Shutting down.\n");
 
-	vfs_clearbootfs();
-	vfs_clearcurdir();
-	vfs_unmountall();
+    vfs_clearbootfs();
+    vfs_clearcurdir();
+    vfs_unmountall();
 
-	thread_shutdown();
+    thread_shutdown();
 
-	splhigh();
+    splhigh();
 }
 
 /*****************************************/
@@ -172,34 +176,34 @@ shutdown(void)
 int
 sys_reboot(int code)
 {
-	switch (code) {
-	    case RB_REBOOT:
-	    case RB_HALT:
-	    case RB_POWEROFF:
-		break;
-	    default:
-		return EINVAL;
-	}
+    switch (code) {
+        case RB_REBOOT:
+        case RB_HALT:
+        case RB_POWEROFF:
+        break;
+        default:
+        return EINVAL;
+    }
 
-	shutdown();
+    shutdown();
 
-	switch (code) {
-	    case RB_HALT:
-		kprintf("The system is halted.\n");
-		mainbus_halt();
-		break;
-	    case RB_REBOOT:
-		kprintf("Rebooting...\n");
-		mainbus_reboot();
-		break;
-	    case RB_POWEROFF:
-		kprintf("The system is halted.\n");
-		mainbus_poweroff();
-		break;
-	}
+    switch (code) {
+        case RB_HALT:
+        kprintf("The system is halted.\n");
+        mainbus_halt();
+        break;
+        case RB_REBOOT:
+        kprintf("Rebooting...\n");
+        mainbus_reboot();
+        break;
+        case RB_POWEROFF:
+        kprintf("The system is halted.\n");
+        mainbus_poweroff();
+        break;
+    }
 
-	panic("reboot operation failed\n");
-	return 0;
+    panic("reboot operation failed\n");
+    return 0;
 }
 
 /*
@@ -210,11 +214,18 @@ sys_reboot(int code)
 void
 kmain(char *arguments)
 {
-	boot();
-	#if OPT_HELLO
-	hello();
-	#endif
-	menu(arguments);
+	// TODO move from here
+	allocTableActive = 0;
+    boot();
+        
+    coremap = coremap_init();
 
-	/* Should not get here */
+    swap_init();
+
+    #if OPT_HELLO
+    hello();
+    #endif
+    menu(arguments);
+
+    /* Should not get here */
 }

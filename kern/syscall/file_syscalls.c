@@ -124,7 +124,7 @@ sys_read(int fd, userptr_t buf_ptr, size_t size)
   return (int)size;
 }
 
-int file_read(int fd, userptr_t buf, size_t size){ //static?
+int file_read(int fd, userptr_t buf, size_t size){ 
 	struct iovec iov; 
 	struct uio u;
 	struct openfile *of;
@@ -154,7 +154,7 @@ int file_read(int fd, userptr_t buf, size_t size){ //static?
 	return (size-u.uio_resid);	
 }
 
-int file_write(int fd, userptr_t buf, size_t size) //static?
+int file_write(int fd, userptr_t buf, size_t size)
 {
 	struct iovec iov;
 	struct uio u;

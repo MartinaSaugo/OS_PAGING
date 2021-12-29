@@ -30,6 +30,8 @@
 #ifndef _MIPS_VM_H_
 #define _MIPS_VM_H_
 
+//#include <coremap.h>
+
 
 /*
  * Machine-dependent VM system definitions.
@@ -109,6 +111,8 @@ void ram_bootstrap(void);
 paddr_t ram_stealmem(unsigned long npages);
 paddr_t ram_getsize(void);
 paddr_t ram_getfirstfree(void);
+paddr_t ram_getmem(unsigned long offsetpages, unsigned long npages);
+void dumbvm_can_sleep(void);
 
 /*
  * TLB shootdown bits.

@@ -32,7 +32,6 @@
 #include <vm.h>
 #include <mainbus.h>
 
-
 vaddr_t firstfree;   /* first free virtual address; set by start.S */
 
 static paddr_t firstpaddr;  /* address of first free physical page */
@@ -109,6 +108,21 @@ ram_stealmem(unsigned long npages)
 	return paddr;
 }
 
+/* get a piece of memory without updating firstpaddr and lastpaddr */
+paddr_t 
+ram_getmem(unsigned long offsetpages, unsigned long npages){
+  size_t size;
+  size_t offset;
+  paddr_t paddr;
+  size = npages * PAGE_SIZE; 
+  offset = offsetpages * PAGE_SIZE;
+  if(firstpaddr + size + offset > lastpaddr) {
+    return 0;
+  }
+  paddr = firstpaddr + offset;
+  return paddr;
+}
+
 /*
  * This function is intended to be called by the VM system when it
  * initializes in order to find out what memory it has available to
@@ -150,4 +164,4 @@ ram_getfirstfree(void)
 	ret = firstpaddr;
 	firstpaddr = lastpaddr = 0;
 	return ret;
-}
+  }

@@ -91,36 +91,36 @@ sem_destroy(struct semaphore *sem)
 void
 P(struct semaphore *sem)
 {
-        KASSERT(sem != NULL);
+    KASSERT(sem != NULL);
 
+    /*
+     * May not block in an interrupt handler.
+     *
+     * For robustness, always check, even if we can actually
+     * complete the P without blocking.
+     */
+    KASSERT(curthread->t_in_interrupt == false);
+
+    /* Use the semaphore spinlock to protect the wchan as well. */
+    spinlock_acquire(&sem->sem_lock);
+    while (sem->sem_count == 0) {
         /*
-         * May not block in an interrupt handler.
          *
-         * For robustness, always check, even if we can actually
-         * complete the P without blocking.
+         * Note that we don't maintain strict FIFO ordering of
+         * threads going through the semaphore; that is, we
+         * might "get" it on the first try even if other
+         * threads are waiting. Apparently according to some
+         * textbooks semaphores must for some reason have
+         * strict ordering. Too bad. :-)
+         *
+         * Exercise: how would you implement strict FIFO
+         * ordering?
          */
-        KASSERT(curthread->t_in_interrupt == false);
-
-	/* Use the semaphore spinlock to protect the wchan as well. */
-	spinlock_acquire(&sem->sem_lock);
-        while (sem->sem_count == 0) {
-		/*
-		 *
-		 * Note that we don't maintain strict FIFO ordering of
-		 * threads going through the semaphore; that is, we
-		 * might "get" it on the first try even if other
-		 * threads are waiting. Apparently according to some
-		 * textbooks semaphores must for some reason have
-		 * strict ordering. Too bad. :-)
-		 *
-		 * Exercise: how would you implement strict FIFO
-		 * ordering?
-		 */
-		wchan_sleep(sem->sem_wchan, &sem->sem_lock);
-        }
-        KASSERT(sem->sem_count > 0);
-        sem->sem_count--;
-	spinlock_release(&sem->sem_lock);
+        wchan_sleep(sem->sem_wchan, &sem->sem_lock);
+    }
+    KASSERT(sem->sem_count > 0);
+    sem->sem_count--;
+    spinlock_release(&sem->sem_lock);
 }
 
 void
@@ -166,8 +166,8 @@ lock_create(const char *name)
 	#endif
 	#if OPT_WC
 	lock->lk_wchan=wchan_create(lock->lk_name);
-	if(lock->lk_wchan==NULL)
-	{
+
+	if(lock->lk_wchan==NULL){
 		kfree(lock->lk_name);
 		kfree(lock);
 		return NULL;

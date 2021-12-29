@@ -61,7 +61,7 @@ void tlb_read(uint32_t *entryhi, uint32_t *entrylo, uint32_t index);
 int tlb_probe(uint32_t entryhi, uint32_t entrylo);
 
 //wmd
-int tlb_victim (void); 
+int tlb_get_rr_victim (void); 
 //
 
 /*
@@ -87,8 +87,8 @@ int tlb_victim (void);
 /* Fields in the low-order word */
 #define TLBLO_PPAGE   0xfffff000
 #define TLBLO_NOCACHE 0x00000800
-//#define TLBLO_DIRTY   0x00000400 //in order to make readonly should be zero
-#define TLBLO_DIRTY   0x00000000
+#define TLBLO_DIRTY   0x00000400 //in order to make readonly should be zero
+// #define TLBLO_DIRTY   0x00000000
 #define TLBLO_VALID   0x00000200
 /*      TLBLO_GLOBAL  0x00000100 */
 

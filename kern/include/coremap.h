@@ -1,14 +1,21 @@
 #ifndef _COREMAP_H_
 #define _COREMAP_H_
-#include <machine/vm.h> //why?
 
 typedef enum {FREE, CLEAN, DIRTY, FIXED} status_t;
 
 typedef struct coremap_entry {
 	status_t status; 
-	paddr_t paddr; //where?
-	long size; //= previous allocsize, now all in one
-	//potential other info for paging
-}coremap_entry_t;
+	paddr_t paddr;  
+	vaddr_t vaddr;	// owner vaddr - pagetable entry
+	long size;      //= previous allocsize, now all in one
+} coremap_entry_t;
+
+coremap_entry_t *coremap;
+int nRamFrames;
+int allocTableActive;
+int firstFreeFrame;
+
+coremap_entry_t *coremap_init(void);
+int coremap_victim_selection(int nvictims);
 
 #endif

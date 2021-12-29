@@ -339,7 +339,7 @@ file      proc/proc.c
 
 file      vm/kmalloc.c
 
-optofffile dumbvm   vm/addrspace.c
+optofffile vm   vm/addrspace.c
 
 #
 # Network
@@ -384,11 +384,17 @@ file      syscall/time_syscalls.c
 defoption hello
 file      main/main.c
 file      main/menu.c
-optfile	hello main/hello.c
+optfile   hello main/hello.c
+
+file      vm/coremap.c
+file      vm/pt.c
+file	  vm/vm_tlb.c
+file	  vm/swapfile.c
+
 
 defoption syscalls
-optfile syscalls syscall/file_syscalls.c
-optfile syscalls syscall/proc_syscalls.c
+optfile   syscalls syscall/file_syscalls.c
+optfile   syscalls syscall/proc_syscalls.c
 
 ########################################
 #                                      #

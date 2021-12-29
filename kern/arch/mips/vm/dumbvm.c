@@ -97,7 +97,7 @@ vm_bootstrap(void)
   int i;
   nRamFrames = ((int)ram_getsize())/PAGE_SIZE;  
 
-  freeRamFrames=(coremap_entry_t*)kmalloc(sizeof(coremap_entry_t)*nRamFrames);
+  freeRamFrames = (coremap_entry_t*) kmalloc (sizeof(coremap_entry_t)*nRamFrames);
   if(freeRamFrames==NULL) return;
 
   for (i=0; i<nRamFrames; i++) {    
@@ -254,9 +254,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	switch (faulttype) {
 	    case VM_FAULT_READONLY:
-		/* We always create pages read-write, so we can't get this */
-		//panic("dumbvm: got VM_FAULT_READONLY\n");
-		//kprintf("dumbvm: got VM_FAULT_READONLY\n");
+		  /* We always create pages read-write, so we can't get this */
+		  panic("dumbvm: got VM_FAULT_READONLY\n");
+		  //kprintf("dumbvm: got VM_FAULT_READONLY\n");
 	    case VM_FAULT_READ:
 	    case VM_FAULT_WRITE:
 		break;

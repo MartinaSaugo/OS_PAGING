@@ -36,9 +36,7 @@
  * You'll probably want to add stuff here.
  */
 
-
 #include <machine/vm.h>
-#include <coremap.h>
 
 /* Fault-type arguments to vm_fault() */
 #define VM_FAULT_READ        0    /* A read was attempted */
@@ -51,11 +49,18 @@ void vm_bootstrap(void);
 /* Fault handling function called by trap code */
 int vm_fault(int faulttype, vaddr_t faultaddress);
 
+paddr_t getuserppage(void);
+int freeuserppage(paddr_t addr);
+
+paddr_t getppages(unsigned long npages);
+
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(unsigned npages);
 void free_kpages(vaddr_t addr);
 
 /* TLB shootdown handling called from interprocessor_interrupt */
 void vm_tlbshootdown(const struct tlbshootdown *);
+
+void tlb_invalidate_entry(vaddr_t remove_vaddr);
 
 #endif /* _VM_H_ */
