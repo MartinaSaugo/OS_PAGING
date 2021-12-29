@@ -355,24 +355,22 @@ paddr_t getppages(unsigned long npages) {
 	return paddr;
 }
 
-int freeppages(paddr_t addr, unsigned long npages){
-	panic("implement freeppages\n");
-	long i, first, np=(long)npages;	
-	// kernel only
-	if (!isTableActive()) 
-		return 0; 
-	first = addr/PAGE_SIZE;
-	// KASSERT(allocSize!=NULL);
-	KASSERT(coremap!=NULL);
-	KASSERT(nRamFrames > first);
+/* this should be called for user pages only, so it frees a single page */
+int freeuserppage(paddr_t addr){
+
+	// spinlock_acquire(&freemem_lock);
+
+	KASSERT((addr % PAGE_SIZE) == 0);			// make sure it's page-aligned
+	unsigned int index = addr / PAGE_SIZE;
+	KASSERT(coremap[index].status != FIXED);	// make sure it's not a kernel page
+
+	coremap[index].status = FREE;
+	coremap[index].size = 0;
+	coremap[index].vaddr = 0;
+	coremap[index].paddr = 0x0;
 	
-	spinlock_acquire(&freemem_lock);
-	for (i=first; i < first+np; i++) {
-	  coremap[i].status = FREE;
-	  coremap[i].size = 0;
-	}
-	spinlock_release(&freemem_lock);
-	return 1;
+	// spinlock_release(&freemem_lock);
+	return 0;
 }
 
 vaddr_t alloc_kpages(unsigned npages)
@@ -392,6 +390,7 @@ void free_kpages(vaddr_t addr)
 	int i;
 	paddr_t paddr = addr - MIPS_KSEG0;
 	KASSERT(coremap != NULL);
+	// KASSERT page == FIXED
 	spinlock_acquire(&freemem_lock);
 	KASSERT(paddr % PAGE_SIZE == 0);
 	long first = paddr/PAGE_SIZE;
@@ -417,21 +416,28 @@ as_create(void)
 	return as;
 }
 
-void as_destroy(struct addrspace *as){
+void as_destroy(struct addrspace *as)
+{
+  KASSERT(as != NULL);
+	KASSERT(as -> pt != NULL);
+  KASSERT(as-> start_region!=NULL);
 	struct region *curr, *prev;
 	int spl, i;
 	spl = splhigh();
-	for (i=0; i<NUM_TLB; i++) 
-	tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
-	//destroy as->pt
-	curr = as -> start_region;
+  //free regions
+  curr = as -> start_region;
 	while(curr!=NULL)
 	{
 		prev = curr;
-		curr = curr->next;
+		curr = curr->next
 		kfree(prev);
-	}
-	kfree(as);
+  }
+  //free pt
+	pt_destroy(&(as -> pt));
+	for(int i = 0; i < NUM_TLB; i++)
+		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+  //free as
+  kfree(as);
 	splx(spl);
 }
 

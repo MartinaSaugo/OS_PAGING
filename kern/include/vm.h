@@ -50,8 +50,9 @@ void vm_bootstrap(void);
 int vm_fault(int faulttype, vaddr_t faultaddress);
 
 paddr_t getuserppage(void);
+int freeuserppage(paddr_t addr);
+
 paddr_t getppages(unsigned long npages);
-int freeppages(paddr_t addr, unsigned long npages);
 
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(unsigned npages);

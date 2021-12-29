@@ -24,6 +24,7 @@ int write_page(int index, paddr_t page);
 int read_page(int index, paddr_t page);
 int swap_out(paddr_t page); 
 int swap_in(int index, paddr_t paddr);
+void swap_unmark(int index);
 
 //  int swap_clean(struct addrspace *as, vaddr_t va);
 
