@@ -16,6 +16,7 @@
 
 #include <coremap.h>
 #include <pt.h>
+#include <vmstats.h>
 
 
 static swap_entry_t swaptable[SWAPSLOTS];
@@ -100,6 +101,8 @@ int swap_out(paddr_t page){
 	}
 	if(err)
 		return -1;
+	//update stats
+	stats.swapfile_writes++;
 	return index;
 } 
 

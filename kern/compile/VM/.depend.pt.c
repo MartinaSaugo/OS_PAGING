@@ -8,4 +8,5 @@ pt.o: ../../vm/pt.c ../../include/pt.h ../../include/types.h \
  ../../include/current.h includelinks/machine/current.h \
  ../../include/thread.h ../../include/array.h \
  includelinks/machine/thread.h ../../include/setjmp.h \
- includelinks/kern/machine/setjmp.h
+ includelinks/kern/machine/setjmp.h ../../include/swapfile.h \
+ ../../include/vnode.h ../../include/addrspace.h

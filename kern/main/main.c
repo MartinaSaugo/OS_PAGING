@@ -54,6 +54,7 @@
 #include "autoconf.h"  // for pseudoconfig
 
 #include <coremap.h>
+#include <vmstats.h>
 
 
 
@@ -155,6 +156,10 @@ shutdown(void)
 
     kprintf("Shutting down.\n");
 
+    kprintf("-------STATISTICS-------\n");
+    print_stats();
+    kprintf("------------------------\n");
+
     vfs_clearbootfs();
     vfs_clearcurdir();
     vfs_unmountall();
@@ -221,6 +226,8 @@ kmain(char *arguments)
     coremap = coremap_init();
 
     swap_init();
+
+    stats_init();
 
     #if OPT_HELLO
     hello();

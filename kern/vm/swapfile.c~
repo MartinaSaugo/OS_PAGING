@@ -16,7 +16,6 @@
 
 #include <coremap.h>
 #include <pt.h>
-#include <vm_tlb.h>
 
 
 static swap_entry_t swaptable[SWAPSLOTS];
@@ -84,30 +83,6 @@ int read_page(int index, paddr_t page){
  * */
 int swap_out(paddr_t page){
 	int i, index = -1, err = -1;
-	/*uint32_t ehi, elo, checkCurr;
-
-	//find page in TLB --> no good approach: Dirty bit only tells if the page is WRITEABLE, not if it was written
-	for (i=0; i < NUM_TLB; i++) 
-	{
-		tlb_read(&ehi, &elo, i);
-		checkCurr = elo & TLBLO_PPAGE;
-		if (checkCurr == page) 
-		{
-			kprintf("I FOUND THE PAGE!\n");
-			//see if it's dirty
-			if(elo & TLBLO_DIRTY)
-			{
-				kprintf("THE PAGE IS DIRTY SIR\n");
-				break;
-			}
-			else
-			{
-				kprintf("THE PAGE IS CLEAN, SKIP\n");
-				return -1; //idk we should work on this wtf am I supposed to return?
-			}
-		}
-	}*/
-
 	for(i = 0; i < SWAPSLOTS; i++){
 		if(swaptable[i].empty == 1){
 			index = i;
@@ -115,11 +90,13 @@ int swap_out(paddr_t page){
 		}
 	}
 	if(index == -1){
+		// TODO manage
 		panic("no more space in the swap file\n");
 	}
 	else {
 		err = write_page(index, page);
 		swaptable[index].empty = 0;
+		// kprintf("swapout %d: %x\n", index, *((int *) (page + 10) ));
 	}
 	if(err)
 		return -1;
@@ -137,6 +114,12 @@ int swap_in(int index, paddr_t paddr){
 		return -1;
 	swaptable[index].empty = 1; // swap entry becomes empty
 	return 0;
+}
+
+void swap_unmark(int index){
+	// check that page is swapped
+	KASSERT(swaptable[index].empty == 0);
+	swaptable[index].empty = 1;
 }
 
 /*
