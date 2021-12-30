@@ -15,4 +15,5 @@ main.o: ../../main/main.c ../../include/types.h \
  ../../include/syscall.h opt-syscalls.h ../../include/test.h \
  ../../include/version.h ../../include/swapfile.h ../../include/vnode.h \
  ../../include/addrspace.h ../../include/pt.h ../../include/cpu.h \
- ../../include/coremap.h ../../include/hello.h opt-hello.h autoconf.h
+ ../../include/coremap.h ../../include/hello.h opt-hello.h autoconf.h \
+ ../../include/vmstats.h

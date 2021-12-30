@@ -390,6 +390,7 @@ file      vm/coremap.c
 file      vm/pt.c
 file	  vm/vm_tlb.c
 file	  vm/swapfile.c
+file	  vm/vmstats.c
 
 
 defoption syscalls

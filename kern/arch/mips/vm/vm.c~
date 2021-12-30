@@ -42,6 +42,7 @@
 #include <coremap.h>
 #include <vm_tlb.h>
 #include <swapfile.h>
+#include <vmstats.h>
 
 /*
  * Dumb MIPS-only "VM system" that is intended to only be just barely
@@ -112,6 +113,8 @@ void tlb_invalidate_entry(vaddr_t remove_vaddr) {
 	index = tlb_probe(remove_vaddr, 0);
 	if (index >= 0) {
 		tlb_write(TLBHI_INVALID(index), TLBLO_INVALID(), index);
+		//update stats
+		stats.tlb_invalidation++;
 	}
 		splx(spl);	
 }
@@ -160,7 +163,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	// Assert that the address space has been set up properly. 
 	KASSERT(as -> pt != NULL);
-	KASSERT(as-> start_region == NULL);
+	KASSERT(as-> start_region != NULL);
 
 	curr = as->start_region;
 	while(curr!=NULL)
@@ -199,21 +202,34 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			// add new pagetable entry
 			err = pt_add(as -> pt, paddr, faultpage);
 			KASSERT(err != -1);
+
+			//update stats
+			stats.tlb_faults++;
+			stats.page_faults_disk++;
+			stats.page_faults_elf++;
 		}
 		// 1.2 not in memory because it has been swapped - implement swap in
 		else if(pte -> swapped){
-			paddr = getuserppage();						// get a new free frame 
+			paddr = getuserppage();				// get a new free frame 
 			// kprintf("\tswap in: page 0x%x in frame %d\n", faultpage, paddr/PAGE_SIZE);
 			err = swap_in(pte -> swap_index, paddr);	// swap in
 			KASSERT(err == 0);
 			coremap[paddr/PAGE_SIZE].vaddr = faultpage;	// update coremap entry
 			pte -> ppage_index = paddr/PAGE_SIZE;		// update ptentry
-			pte -> swapped = 0;							// page is now present
+			pte -> swapped = 0;				// page is now present
+
+			//update stats
+			stats.tlb_faults++;
+			stats.page_faults_disk++;
+			stats.page_faults_swapfile++;
 		}
 		// 1.3 found in memory => update TLB and return 0 (i.e. restart)
 		else {
 			paddr = pte -> ppage_index * PAGE_SIZE;
 			(void) paddr;
+			//update stats
+			stats.tlb_faults++;
+			stats.tlb_reloads++;
 		}
 	}
 	// 0. invalid address = segmentation fault
@@ -241,6 +257,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultpage, paddr);
 		tlb_write(ehi, elo, i);
 		splx(spl);
+		//update stats
+		stats.tlb_faults_w_free++;
 		return 0;
 	}
 
@@ -250,6 +268,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultpage, paddr);
 	tlb_write(ehi, elo, i); 
 	splx(spl);
+	//update stats
+	stats.tlb_stats_w_replace++;
 	return 0;
 }
 
@@ -355,24 +375,22 @@ paddr_t getppages(unsigned long npages) {
 	return paddr;
 }
 
-int freeppages(paddr_t addr, unsigned long npages){
-	panic("implement freeppages\n");
-	long i, first, np=(long)npages;	
-	// kernel only
-	if (!isTableActive()) 
-		return 0; 
-	first = addr/PAGE_SIZE;
-	// KASSERT(allocSize!=NULL);
-	KASSERT(coremap!=NULL);
-	KASSERT(nRamFrames > first);
+/* this should be called for user pages only, so it frees a single page */
+int freeuserppage(paddr_t addr){
+
+	// spinlock_acquire(&freemem_lock);
+
+	KASSERT((addr % PAGE_SIZE) == 0);			// make sure it's page-aligned
+	unsigned int index = addr / PAGE_SIZE;
+	KASSERT(coremap[index].status != FIXED);	// make sure it's not a kernel page
+
+	coremap[index].status = FREE;
+	coremap[index].size = 0;
+	coremap[index].vaddr = 0;
+	coremap[index].paddr = 0x0;
 	
-	spinlock_acquire(&freemem_lock);
-	for (i=first; i < first+np; i++) {
-	  coremap[i].status = FREE;
-	  coremap[i].size = 0;
-	}
-	spinlock_release(&freemem_lock);
-	return 1;
+	// spinlock_release(&freemem_lock);
+	return 0;
 }
 
 vaddr_t alloc_kpages(unsigned npages)
@@ -392,6 +410,7 @@ void free_kpages(vaddr_t addr)
 	int i;
 	paddr_t paddr = addr - MIPS_KSEG0;
 	KASSERT(coremap != NULL);
+	// KASSERT page == FIXED
 	spinlock_acquire(&freemem_lock);
 	KASSERT(paddr % PAGE_SIZE == 0);
 	long first = paddr/PAGE_SIZE;
@@ -417,13 +436,15 @@ as_create(void)
 	return as;
 }
 
-void as_destroy(struct addrspace *as){
+void as_destroy(struct addrspace *as)
+{
+	KASSERT(as != NULL);
+	KASSERT(as -> pt != NULL);
+	KASSERT(as-> start_region!=NULL);
 	struct region *curr, *prev;
-	int spl, i;
+	int spl;
 	spl = splhigh();
-	for (i=0; i<NUM_TLB; i++) 
-	tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
-	//destroy as->pt
+	//free regions
 	curr = as -> start_region;
 	while(curr!=NULL)
 	{
@@ -431,6 +452,11 @@ void as_destroy(struct addrspace *as){
 		curr = curr->next;
 		kfree(prev);
 	}
+	//free pt
+	pt_destroy(&(as -> pt));
+	for(int i = 0; i < NUM_TLB; i++)
+		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+	//free as
 	kfree(as);
 	splx(spl);
 }

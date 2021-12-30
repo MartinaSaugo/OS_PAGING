@@ -13,4 +13,5 @@ swapfile.o: ../../vm/swapfile.c ../../include/swapfile.h \
  ../../include/coremap.h ../../include/vfs.h ../../include/uio.h \
  ../../include/kern/iovec.h ../../include/elf.h \
  includelinks/machine/elf.h ../../include/spl.h ../../include/synch.h \
- ../../include/kern/errno.h ../../include/kern/fcntl.h
+ ../../include/kern/errno.h ../../include/kern/fcntl.h \
+ ../../include/vmstats.h

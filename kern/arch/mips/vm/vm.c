@@ -42,6 +42,7 @@
 #include <coremap.h>
 #include <vm_tlb.h>
 #include <swapfile.h>
+#include <vmstats.h>
 
 /*
  * Dumb MIPS-only "VM system" that is intended to only be just barely
@@ -112,6 +113,8 @@ void tlb_invalidate_entry(vaddr_t remove_vaddr) {
 	index = tlb_probe(remove_vaddr, 0);
 	if (index >= 0) {
 		tlb_write(TLBHI_INVALID(index), TLBLO_INVALID(), index);
+		//update stats
+		stats.tlb_invalidation++;
 	}
 		splx(spl);	
 }
@@ -199,21 +202,34 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 			// add new pagetable entry
 			err = pt_add(as -> pt, paddr, faultpage);
 			KASSERT(err != -1);
+
+			//update stats
+			stats.tlb_faults++;
+			stats.page_faults_disk++;
+			stats.page_faults_elf++;
 		}
 		// 1.2 not in memory because it has been swapped - implement swap in
 		else if(pte -> swapped){
-			paddr = getuserppage();						// get a new free frame 
+			paddr = getuserppage();				// get a new free frame 
 			// kprintf("\tswap in: page 0x%x in frame %d\n", faultpage, paddr/PAGE_SIZE);
 			err = swap_in(pte -> swap_index, paddr);	// swap in
 			KASSERT(err == 0);
 			coremap[paddr/PAGE_SIZE].vaddr = faultpage;	// update coremap entry
 			pte -> ppage_index = paddr/PAGE_SIZE;		// update ptentry
-			pte -> swapped = 0;							// page is now present
+			pte -> swapped = 0;				// page is now present
+
+			//update stats
+			stats.tlb_faults++;
+			stats.page_faults_disk++;
+			stats.page_faults_swapfile++;
 		}
 		// 1.3 found in memory => update TLB and return 0 (i.e. restart)
 		else {
 			paddr = pte -> ppage_index * PAGE_SIZE;
 			(void) paddr;
+			//update stats
+			stats.tlb_faults++;
+			stats.tlb_reloads++;
 		}
 	}
 	// 0. invalid address = segmentation fault
@@ -241,6 +257,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultpage, paddr);
 		tlb_write(ehi, elo, i);
 		splx(spl);
+		//update stats
+		stats.tlb_faults_w_free++;
 		return 0;
 	}
 
@@ -250,6 +268,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultpage, paddr);
 	tlb_write(ehi, elo, i); 
 	splx(spl);
+	//update stats
+	stats.tlb_faults_w_replace++;
 	return 0;
 }
 

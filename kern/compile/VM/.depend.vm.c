@@ -11,4 +11,4 @@ vm.o: ../../arch/mips/vm/vm.c ../../include/types.h \
  ../../include/setjmp.h includelinks/kern/machine/setjmp.h \
  ../../include/addrspace.h ../../include/vm.h ../../include/pt.h \
  ../../include/coremap.h ../../include/vm_tlb.h ../../include/swapfile.h \
- ../../include/vnode.h
+ ../../include/vnode.h ../../include/vmstats.h
