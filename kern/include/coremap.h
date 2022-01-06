@@ -17,5 +17,6 @@ int firstFreeFrame;
 
 coremap_entry_t *coremap_init(void);
 int coremap_victim_selection(int nvictims);
+void coremap_dealloc(void);
 
 #endif

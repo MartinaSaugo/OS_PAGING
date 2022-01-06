@@ -155,7 +155,9 @@ shutdown(void)
 {
 
     kprintf("Shutting down.\n");
-
+	
+    swap_dealloc();
+    coremap_dealloc();
     kprintf("-------STATISTICS-------\n");
     print_stats();
     kprintf("------------------------\n");

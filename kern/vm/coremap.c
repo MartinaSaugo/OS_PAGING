@@ -110,3 +110,8 @@ int coremap_victim_selection(int nvictims){
 	next_victim = victim + nvictims;
 	return victim;
 }
+
+void coremap_dealloc(void)
+{
+	kfree(coremap);
+}
