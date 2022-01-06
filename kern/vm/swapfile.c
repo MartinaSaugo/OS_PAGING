@@ -125,6 +125,12 @@ void swap_unmark(int index){
 	swaptable[index].empty = 1;
 }
 
+void swap_dealloc(void)
+{
+	vfs_close(swapspace); 
+	//swaptable è costante
+}
+
 /*
 	int evict_page(struct page* page); 
 	int swap_clean(struct addrspace *as, vaddr_t va);
