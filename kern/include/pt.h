@@ -20,7 +20,6 @@ typedef struct ptentry {
 typedef struct pt {
   ptentry_t *nil;                   // use sentinel node
   int npages;
-  int nswapped;
 } pt_t;
 
 pt_t* pt_init(void);
