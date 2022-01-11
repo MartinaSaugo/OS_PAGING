@@ -234,7 +234,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	}
 	// 0. invalid address = segmentation fault
 	else {
-		kprintf("EFAULT!\n");
+		kprintf("***** EFAULT!\n");
 		return EFAULT;
 	}
 
